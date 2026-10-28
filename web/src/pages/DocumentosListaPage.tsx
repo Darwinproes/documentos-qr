@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { EsqueletoLista } from '../components/Esqueletos';
+import { EtiquetaEstado } from '../components/EtiquetaEstado';
 import { LayoutPanel } from '../components/LayoutPanel';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -9,16 +11,10 @@ import {
   hoyLocalIso
 } from '../lib/formato';
 import { supabase } from '../lib/supabase';
-import { DocumentoResumen, EstadoVisualDocumento, TipoDocumento } from '../lib/tipos';
+import { DocumentoResumen, TipoDocumento } from '../lib/tipos';
+import { useCargaDiferida, useTituloDocumento } from '../lib/useCargaDiferida';
 
 const TAMANO_PAGINA = 25;
-
-const ETIQUETA_ESTADO: Record<EstadoVisualDocumento, string> = {
-  vigente: 'Vigente',
-  vencido: 'Vencido',
-  cancelado: 'Cancelado',
-  pendiente: 'Pendiente'
-};
 
 function obtenerNombreTipo(doc: DocumentoResumen): string {
   const td = doc.tipos_documento;
@@ -30,6 +26,8 @@ function obtenerNombreTipo(doc: DocumentoResumen): string {
 }
 
 export function DocumentosListaPage() {
+  useTituloDocumento('Panel · Documentos');
+
   const { perfil } = useAuth();
 
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
@@ -43,7 +41,10 @@ export function DocumentosListaPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>('');
 
   const [cargando, setCargando] = useState<boolean>(true);
+  const mostrarEsqueleto = useCargaDiferida(cargando, 300);
   const [error, setError] = useState<string | null>(null);
+
+  const puedeEmitir = perfil?.rol === 'emisor' || perfil?.rol === 'admin';
 
   useEffect(() => {
     async function cargarTipos() {
@@ -141,9 +142,9 @@ export function DocumentosListaPage() {
             Consulta y seguimiento de documentos oficiales en el registro central.
           </p>
         </div>
-        {(perfil?.rol === 'emisor' || perfil?.rol === 'admin') && (
+        {puedeEmitir && (
           <Link to="/panel/emitir" className="btn btn-primary">
-            + Emitir documento
+            Emitir documento
           </Link>
         )}
       </div>
@@ -228,17 +229,27 @@ export function DocumentosListaPage() {
 
       <section className="card table-card" aria-live="polite">
         {cargando ? (
-          <div className="state-card">
-            <div className="spinner" aria-hidden="true" />
-            <p className="state-text">Cargando documentos…</p>
-          </div>
+          mostrarEsqueleto ? (
+            <EsqueletoLista />
+          ) : null
         ) : documentos.length === 0 ? (
           <div className="state-card">
-            <p className="state-text">No se encontraron documentos con los criterios seleccionados.</p>
+            <h2 className="state-heading">No hay documentos para mostrar</h2>
+            <p className="state-description">
+              No se encontraron documentos emitidos con los criterios seleccionados.
+            </p>
+            {puedeEmitir && (
+              <div className="state-actions">
+                <Link to="/panel/emitir" className="btn btn-primary">
+                  Emitir documento
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           <>
-            <div className="table-responsive">
+            {/* Tabla para escritorio (>= 768 px) */}
+            <div className="table-responsive desktop-only-table">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -270,9 +281,7 @@ export function DocumentosListaPage() {
                             : 'Sin vencimiento'}
                         </td>
                         <td>
-                          <span className={`badge badge-estado-${estadoVisual}`}>
-                            {ETIQUETA_ESTADO[estadoVisual]}
-                          </span>
+                          <EtiquetaEstado estado={estadoVisual} />
                         </td>
                         <td>
                           <Link
@@ -289,6 +298,39 @@ export function DocumentosListaPage() {
               </table>
             </div>
 
+            {/* Tarjetas para móvil (< 768 px) */}
+            <div className="mobile-cards-list">
+              {documentos.map((doc) => {
+                const estadoVisual = calcularEstadoVisual(doc.estado, doc.vigente_hasta);
+                return (
+                  <article key={doc.id} className="mobile-doc-card">
+                    <div className="mobile-doc-card-top">
+                      <Link
+                        to={`/panel/documentos/${doc.id}`}
+                        className="mono-text mobile-doc-folio"
+                      >
+                        {doc.folio}
+                      </Link>
+                      <EtiquetaEstado estado={estadoVisual} />
+                    </div>
+                    <p className="mobile-doc-destinatario">{doc.destinatario}</p>
+                    <p className="mobile-doc-meta">
+                      <span>{obtenerNombreTipo(doc)}</span> ·{' '}
+                      <span>Emitido: {formatearFecha(doc.emitido_en)}</span>
+                    </p>
+                    <div className="mobile-doc-actions">
+                      <Link
+                        to={`/panel/documentos/${doc.id}`}
+                        className="btn btn-sm btn-secondary btn-block"
+                      >
+                        Ver detalle
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
             <div className="pagination-bar">
               <span className="pagination-info">
                 Mostrando {pagina * TAMANO_PAGINA + 1}–
@@ -301,7 +343,7 @@ export function DocumentosListaPage() {
                   disabled={pagina === 0}
                   onClick={() => setPagina((p) => Math.max(0, p - 1))}
                 >
-                  ← Anterior
+                  Anterior
                 </button>
                 <span className="pagination-page-indicator">
                   Página {pagina + 1} de {totalPaginas}
@@ -312,7 +354,7 @@ export function DocumentosListaPage() {
                   disabled={pagina + 1 >= totalPaginas}
                   onClick={() => setPagina((p) => p + 1)}
                 >
-                  Siguiente →
+                  Siguiente
                 </button>
               </div>
             </div>

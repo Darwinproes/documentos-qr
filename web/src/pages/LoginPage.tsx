@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ORG_NOMBRE } from '../lib/supabase';
+import { useTituloDocumento } from '../lib/useCargaDiferida';
 
 export function LoginPage() {
+  useTituloDocumento('Panel · Iniciar sesión');
+
   const { perfil, cargando, errorAcceso, iniciarSesion } = useAuth();
   const navigate = useNavigate();
 
@@ -95,7 +98,7 @@ export function LoginPage() {
 
         <div className="login-footer">
           <Link to="/verificar" className="link-subtle">
-            ← Ir a la página pública de verificación
+            Volver a la página pública de verificación
           </Link>
         </div>
       </div>

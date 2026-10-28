@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { EsqueletoDetalle } from '../components/Esqueletos';
+import { EtiquetaEstado } from '../components/EtiquetaEstado';
 import { LayoutPanel } from '../components/LayoutPanel';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -11,17 +13,10 @@ import { supabase } from '../lib/supabase';
 import {
   DefinicionCampo,
   DocumentoDetalle,
-  EstadoVisualDocumento,
   RegistroBitacora,
   RegistroVerificacion
 } from '../lib/tipos';
-
-const ETIQUETA_ESTADO: Record<EstadoVisualDocumento, string> = {
-  vigente: 'Vigente',
-  vencido: 'Vencido',
-  cancelado: 'Cancelado',
-  pendiente: 'Pendiente'
-};
+import { useCargaDiferida, useTituloDocumento } from '../lib/useCargaDiferida';
 
 const ETIQUETA_ACCION_BITACORA: Record<string, string> = {
   emitido: 'Documento registrado (folio reservado)',
@@ -41,20 +36,73 @@ export function DocumentoDetallePage() {
   const { perfil } = useAuth();
 
   const [documento, setDocumento] = useState<DocumentoDetalleConCampos | null>(null);
+  useTituloDocumento(documento ? `Panel · ${documento.folio}` : 'Panel · Detalle de documento');
+
   const [bitacora, setBitacora] = useState<RegistroBitacora[]>([]);
   const [verificaciones, setVerificaciones] = useState<RegistroVerificacion[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
+  const mostrarEsqueleto = useCargaDiferida(cargando, 300);
   const [error, setError] = useState<string | null>(null);
 
   const [descargandoPdf, setDescargandoPdf] = useState<boolean>(false);
   const [errorPdf, setErrorPdf] = useState<string | null>(null);
 
-  // Modal de cancelación (solo admin)
+  // Modal de cancelación accesible (D7)
   const [modalCancelarAbierto, setModalCancelarAbierto] = useState<boolean>(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState<string>('');
   const [confirmacionCheck, setConfirmacionCheck] = useState<boolean>(false);
   const [cancelando, setCancelando] = useState<boolean>(false);
   const [errorCancelacion, setErrorCancelacion] = useState<string | null>(null);
+
+  const botonAbrirModalRef = useRef<HTMLButtonElement | null>(null);
+  const modalCardRef = useRef<HTMLDivElement | null>(null);
+  const textareaMotivoRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const cerrarModalCancelar = useCallback(() => {
+    setModalCancelarAbierto(false);
+    setTimeout(() => {
+      botonAbrirModalRef.current?.focus();
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!modalCancelarAbierto) return;
+
+    const timer = window.setTimeout(() => {
+      textareaMotivoRef.current?.focus();
+    }, 10);
+
+    const manejarKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !cancelando) {
+        e.preventDefault();
+        cerrarModalCancelar();
+        return;
+      }
+
+      if (e.key === 'Tab' && modalCardRef.current) {
+        const focusables = modalCardRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const primero = focusables[0];
+        const ultimo = focusables[focusables.length - 1];
+
+        if (e.shiftKey && document.activeElement === primero) {
+          e.preventDefault();
+          ultimo.focus();
+        } else if (!e.shiftKey && document.activeElement === ultimo) {
+          e.preventDefault();
+          primero.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', manejarKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('keydown', manejarKeyDown);
+    };
+  }, [modalCancelarAbierto, cancelando, cerrarModalCancelar]);
 
   const cargarTodo = useCallback(async () => {
     if (!id) return;
@@ -157,14 +205,7 @@ export function DocumentoDetallePage() {
   };
 
   if (cargando) {
-    return (
-      <LayoutPanel>
-        <div className="card state-card" role="status" aria-live="polite">
-          <div className="spinner" aria-hidden="true" />
-          <p className="state-text">Cargando detalle del documento…</p>
-        </div>
-      </LayoutPanel>
-    );
+    return <LayoutPanel>{mostrarEsqueleto ? <EsqueletoDetalle /> : null}</LayoutPanel>;
   }
 
   if (error || !documento) {
@@ -175,7 +216,7 @@ export function DocumentoDetallePage() {
           <p className="state-description">{error}</p>
           <div className="state-actions">
             <Link to="/panel" className="btn btn-primary">
-              ← Volver a la lista
+              Volver a la lista
             </Link>
           </div>
         </div>
@@ -193,7 +234,7 @@ export function DocumentoDetallePage() {
     <LayoutPanel>
       <div className="breadcrumb-row">
         <Link to="/panel" className="link-subtle">
-          ← Volver a documentos emitidos
+          Volver a documentos emitidos
         </Link>
       </div>
 
@@ -201,9 +242,7 @@ export function DocumentoDetallePage() {
         <div>
           <div className="folio-heading-group">
             <h1 className="page-title mono-text">{documento.folio}</h1>
-            <span className={`badge badge-estado-${estadoVisual}`}>
-              {ETIQUETA_ESTADO[estadoVisual]}
-            </span>
+            <EtiquetaEstado estado={estadoVisual} />
           </div>
           <p className="page-subtitle">
             {infoTipo ? `${infoTipo.clave} — ${infoTipo.nombre}` : 'Documento oficial'}
@@ -224,6 +263,7 @@ export function DocumentoDetallePage() {
 
           {perfil?.rol === 'admin' && documento.estado === 'vigente' && (
             <button
+              ref={botonAbrirModalRef}
               type="button"
               className="btn btn-danger"
               onClick={() => {
@@ -255,7 +295,9 @@ export function DocumentoDetallePage() {
             </div>
             <div className="details-item">
               <dt>Estado en registro</dt>
-              <dd>{ETIQUETA_ESTADO[estadoVisual]}</dd>
+              <dd>
+                <EtiquetaEstado estado={estadoVisual} />
+              </dd>
             </div>
             <div className="details-item details-item-wide">
               <dt>Destinatario</dt>
@@ -407,7 +449,7 @@ export function DocumentoDetallePage() {
           aria-modal="true"
           aria-labelledby="modal-cancelar-titulo"
         >
-          <div className="card modal-card">
+          <div ref={modalCardRef} className="card modal-card">
             <h2 id="modal-cancelar-titulo" className="section-title text-danger">
               Cancelar documento {documento.folio}
             </h2>
@@ -429,6 +471,7 @@ export function DocumentoDetallePage() {
                   Motivo de la cancelación (mínimo 5 caracteres) *
                 </label>
                 <textarea
+                  ref={textareaMotivoRef}
                   id="motivo-cancelacion"
                   className="form-textarea"
                   rows={3}
@@ -456,7 +499,7 @@ export function DocumentoDetallePage() {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => setModalCancelarAbierto(false)}
+                  onClick={cerrarModalCancelar}
                   disabled={cancelando}
                 >
                   Volver sin cancelar

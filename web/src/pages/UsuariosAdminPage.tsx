@@ -3,8 +3,11 @@ import { LayoutPanel } from '../components/LayoutPanel';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Perfil, RolDocumentos } from '../lib/tipos';
+import { useTituloDocumento } from '../lib/useCargaDiferida';
 
 export function UsuariosAdminPage() {
+  useTituloDocumento('Panel · Usuarios y roles');
+
   const { perfil: miPerfil, recargarPerfil } = useAuth();
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);

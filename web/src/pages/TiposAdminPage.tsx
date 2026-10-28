@@ -2,11 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { LayoutPanel } from '../components/LayoutPanel';
 import { supabase } from '../lib/supabase';
 import { DefinicionCampo, TipoCampo, TipoDocumento } from '../lib/tipos';
+import { useTituloDocumento } from '../lib/useCargaDiferida';
 
 const REGEX_CLAVE_TIPO = /^[A-Z0-9]{2,10}$/;
 const REGEX_CLAVE_CAMPO = /^[a-z][a-z0-9_]{0,39}$/;
 
 export function TiposAdminPage() {
+  useTituloDocumento('Panel · Tipos de documento');
+
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
   const [errorLista, setErrorLista] = useState<string | null>(null);
@@ -223,7 +226,6 @@ export function TiposAdminPage() {
       setModoFormulario('cerrado');
       await cargarTipos();
     } else if (modoFormulario === 'edicion' && idEditando !== null) {
-      // Nota de seguridad/esquema: en update no se envían clave ni prefijo_folio
       const { error } = await supabase
         .from('tipos_documento')
         .update({
@@ -257,7 +259,7 @@ export function TiposAdminPage() {
         </div>
         {modoFormulario === 'cerrado' && (
           <button type="button" className="btn btn-primary" onClick={abrirAlta}>
-            + Nuevo tipo de documento
+            Nuevo tipo de documento
           </button>
         )}
       </div>
@@ -405,7 +407,7 @@ export function TiposAdminPage() {
                   </p>
                 </div>
                 <button type="button" className="btn btn-sm btn-secondary" onClick={agregarCampo}>
-                  + Agregar campo
+                  Agregar campo
                 </button>
               </div>
 
@@ -503,7 +505,7 @@ export function TiposAdminPage() {
                             title="Subir campo"
                             aria-label={`Subir campo ${campo.etiqueta || idx + 1}`}
                           >
-                            ↑
+                            Subir
                           </button>
                           <button
                             type="button"
@@ -513,7 +515,7 @@ export function TiposAdminPage() {
                             title="Bajar campo"
                             aria-label={`Bajar campo ${campo.etiqueta || idx + 1}`}
                           >
-                            ↓
+                            Bajar
                           </button>
                           <button
                             type="button"
@@ -580,7 +582,11 @@ export function TiposAdminPage() {
                     <td>{t.vigencia_dias ? `${t.vigencia_dias} días` : 'Sin vencimiento'}</td>
                     <td>{(t.campos || []).length} campos</td>
                     <td>
-                      <span className={`badge ${t.activo ? 'badge-estado-vigente' : 'badge-estado-cancelado'}`}>
+                      <span
+                        className={`badge ${
+                          t.activo ? 'badge-estado-vigente' : 'badge-estado-cancelado'
+                        }`}
+                      >
                         {t.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>

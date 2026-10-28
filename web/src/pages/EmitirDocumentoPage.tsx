@@ -11,11 +11,21 @@ import {
   SolicitudEmitirDocumento,
   TipoDocumento
 } from '../lib/tipos';
+import { useTituloDocumento } from '../lib/useCargaDiferida';
 
 type ModoVigencia = 'segun_tipo' | 'fecha_especifica' | 'sin_vencimiento';
-type PasoEmision = 'captura' | 'confirmacion' | 'resultado';
+type PasoEmision = 1 | 2 | 3 | 4;
+
+const PASOS_DEFINICION: { numero: PasoEmision; etiqueta: string }[] = [
+  { numero: 1, etiqueta: 'Tipo' },
+  { numero: 2, etiqueta: 'Datos' },
+  { numero: 3, etiqueta: 'Confirmar' },
+  { numero: 4, etiqueta: 'Listo' }
+];
 
 export function EmitirDocumentoPage() {
+  useTituloDocumento('Panel · Emitir documento');
+
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [cargandoTipos, setCargandoTipos] = useState<boolean>(true);
 
@@ -25,11 +35,11 @@ export function EmitirDocumentoPage() {
   const [modoVigencia, setModoVigencia] = useState<ModoVigencia>('segun_tipo');
   const [fechaEspecifica, setFechaEspecifica] = useState<string>('');
 
-  const [paso, setPaso] = useState<PasoEmision>('captura');
+  const [paso, setPaso] = useState<PasoEmision>(1);
   const [emitiendo, setEmitiendo] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<RespuestaEmitirDocumento | null>(null);
-  const [copiado, setCopiado] = useState<boolean>(false);
+  const [copiadoCampo, setCopiadoCampo] = useState<'folio' | 'codigo' | 'enlace' | null>(null);
 
   useEffect(() => {
     async function cargarTiposActivos() {
@@ -65,7 +75,17 @@ export function EmitirDocumentoPage() {
     }));
   };
 
-  const validarCaptura = (): boolean => {
+  const avanzarADatos = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!tipoActual) {
+      setError('Seleccione un tipo de documento activo.');
+      return;
+    }
+    setPaso(2);
+  };
+
+  const validarDatosCaptura = (): boolean => {
     setError(null);
 
     if (!tipoActual) {
@@ -112,8 +132,8 @@ export function EmitirDocumentoPage() {
 
   const pasarAConfirmacion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validarCaptura()) {
-      setPaso('confirmacion');
+    if (validarDatosCaptura()) {
+      setPaso(3);
     }
   };
 
@@ -144,7 +164,7 @@ export function EmitirDocumentoPage() {
     try {
       const res = await emitirDocumento(solicitud);
       setResultado(res);
-      setPaso('resultado');
+      setPaso(4);
     } catch (err) {
       if (err instanceof ErrorApi) {
         setError(err.message);
@@ -156,14 +176,13 @@ export function EmitirDocumentoPage() {
     }
   };
 
-  const copiarEnlace = async () => {
-    if (!resultado?.url_verificacion) return;
+  const copiarValor = async (tipo: 'folio' | 'codigo' | 'enlace', texto: string) => {
     try {
-      await navigator.clipboard.writeText(resultado.url_verificacion);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2500);
+      await navigator.clipboard.writeText(texto);
+      setCopiadoCampo(tipo);
+      setTimeout(() => setCopiadoCampo(null), 2500);
     } catch {
-      setCopiado(false);
+      setCopiadoCampo(null);
     }
   };
 
@@ -174,7 +193,7 @@ export function EmitirDocumentoPage() {
     setFechaEspecifica('');
     setResultado(null);
     setError(null);
-    setPaso('captura');
+    setPaso(1);
   };
 
   const resumenVigenciaTexto = () => {
@@ -198,6 +217,28 @@ export function EmitirDocumentoPage() {
         </div>
       </div>
 
+      {/* Indicador de pasos D7: 1 Tipo → 2 Datos → 3 Confirmar → 4 Listo */}
+      <nav className="stepper-nav" aria-label="Progreso de emisión">
+        <ol className="stepper-list">
+          {PASOS_DEFINICION.map((item) => {
+            const completado = paso > item.numero;
+            const actual = paso === item.numero;
+            return (
+              <li
+                key={item.numero}
+                className={`stepper-item ${actual ? 'stepper-item-active' : ''} ${
+                  completado ? 'stepper-item-completed' : ''
+                }`}
+                aria-current={actual ? 'step' : undefined}
+              >
+                <span className="stepper-badge">{item.numero}</span>
+                <span className="stepper-label">{item.etiqueta}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+
       {error && (
         <div className="alert alert-error" role="alert" aria-live="assertive">
           {error}
@@ -213,12 +254,12 @@ export function EmitirDocumentoPage() {
         <div className="card state-card">
           <p className="state-text">No hay tipos de documento activos para emitir.</p>
         </div>
-      ) : paso === 'captura' ? (
+      ) : paso === 1 ? (
         <section className="card form-card">
-          <form onSubmit={pasarAConfirmacion} className="form-stack" noValidate>
+          <form onSubmit={avanzarADatos} className="form-stack" noValidate>
             <div className="form-group">
               <label htmlFor="select-tipo" className="form-label">
-                1. Tipo de documento *
+                Seleccione el tipo de documento a emitir *
               </label>
               <select
                 id="select-tipo"
@@ -238,9 +279,36 @@ export function EmitirDocumentoPage() {
               )}
             </div>
 
+            {tipoActual && (
+              <div className="type-preview-box">
+                <p className="text-small">
+                  <strong>Prefijo de folio:</strong>{' '}
+                  <span className="mono-text">{tipoActual.prefijo_folio}</span> ·{' '}
+                  <strong>Vigencia por defecto:</strong>{' '}
+                  {tipoActual.vigencia_dias
+                    ? `${tipoActual.vigencia_dias} días`
+                    : 'Sin vencimiento'}{' '}
+                  · <strong>Campos del formato:</strong> {(tipoActual.campos || []).length}
+                </p>
+              </div>
+            )}
+
+            <div className="form-actions-bar">
+              <Link to="/panel" className="btn btn-secondary">
+                Cancelar
+              </Link>
+              <button type="submit" className="btn btn-primary">
+                Continuar a captura de datos
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : paso === 2 && tipoActual ? (
+        <section className="card form-card">
+          <form onSubmit={pasarAConfirmacion} className="form-stack" noValidate>
             <div className="form-group">
               <label htmlFor="input-destinatario" className="form-label">
-                2. Destinatario (nombre completo o razón social) *
+                Destinatario (nombre completo o razón social) *
               </label>
               <input
                 id="input-destinatario"
@@ -254,9 +322,9 @@ export function EmitirDocumentoPage() {
               />
             </div>
 
-            {tipoActual && tipoActual.campos && tipoActual.campos.length > 0 && (
+            {tipoActual.campos && tipoActual.campos.length > 0 && (
               <fieldset className="fields-fieldset">
-                <legend className="fieldset-legend">3. Datos del formato ({tipoActual.nombre})</legend>
+                <legend className="fieldset-legend">Datos del formato ({tipoActual.nombre})</legend>
                 <div className="form-stack">
                   {tipoActual.campos.map((campo) => {
                     const idInput = `campo-${campo.clave}`;
@@ -306,7 +374,7 @@ export function EmitirDocumentoPage() {
             )}
 
             <fieldset className="fields-fieldset">
-              <legend className="fieldset-legend">4. Vigencia del documento</legend>
+              <legend className="fieldset-legend">Vigencia del documento</legend>
               <div className="radio-group">
                 <label className="radio-option">
                   <input
@@ -317,7 +385,7 @@ export function EmitirDocumentoPage() {
                   />
                   <span>
                     Según el tipo (
-                    {tipoActual?.vigencia_dias
+                    {tipoActual.vigencia_dias
                       ? `${tipoActual.vigencia_dias} días`
                       : 'sin vencimiento por defecto'}
                     )
@@ -364,16 +432,23 @@ export function EmitirDocumentoPage() {
             </fieldset>
 
             <div className="form-actions-bar">
-              <Link to="/panel" className="btn btn-secondary">
-                Cancelar
-              </Link>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setError(null);
+                  setPaso(1);
+                }}
+              >
+                Cambiar tipo
+              </button>
               <button type="submit" className="btn btn-primary">
-                Revisar y continuar →
+                Revisar y confirmar
               </button>
             </div>
           </form>
         </section>
-      ) : paso === 'confirmacion' && tipoActual ? (
+      ) : paso === 3 && tipoActual ? (
         <section className="card confirmation-card" aria-live="polite">
           <h2 className="section-title">Confirmar datos antes de emitir</h2>
           <p className="page-subtitle">
@@ -427,11 +502,11 @@ export function EmitirDocumentoPage() {
               className="btn btn-secondary"
               onClick={() => {
                 setError(null);
-                setPaso('captura');
+                setPaso(2);
               }}
               disabled={emitiendo}
             >
-              ← Modificar datos
+              Modificar datos
             </button>
             <button
               type="button"
@@ -446,7 +521,23 @@ export function EmitirDocumentoPage() {
       ) : resultado ? (
         <section className="card emission-result-card" aria-live="polite">
           <div className="status-banner status-valido">
-            <h2 className="status-heading">Documento emitido correctamente</h2>
+            <div className="status-header-row">
+              <svg
+                className="status-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </svg>
+              <h2 className="status-heading">Documento emitido correctamente</h2>
+            </div>
             <p className="status-message">
               El documento ha quedado registrado con estado vigente y su archivo PDF está listo.
             </p>
@@ -458,15 +549,44 @@ export function EmitirDocumentoPage() {
             documento.
           </div>
 
+          {/* Feedback accesible para botones Copiar */}
+          <div className="sr-only" aria-live="polite">
+            {copiadoCampo ? 'Copiado al portapapeles' : ''}
+          </div>
+
+          <div className="credentials-highlight-grid mt-section">
+            <div className="credential-card">
+              <span className="credential-label">Folio asignado</span>
+              <div className="credential-value-row">
+                <strong className="mono-text credential-big-value">{resultado.folio}</strong>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => copiarValor('folio', resultado.folio)}
+                >
+                  {copiadoCampo === 'folio' ? 'Copiado' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+
+            <div className="credential-card">
+              <span className="credential-label">Código de verificación</span>
+              <div className="credential-value-row">
+                <strong className="mono-text credential-big-value">
+                  {resultado.codigo_verificacion}
+                </strong>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => copiarValor('codigo', resultado.codigo_verificacion)}
+                >
+                  {copiadoCampo === 'codigo' ? 'Copiado' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <dl className="details-grid mt-section">
-            <div className="details-item">
-              <dt>Folio asignado</dt>
-              <dd className="mono-text font-semibold">{resultado.folio}</dd>
-            </div>
-            <div className="details-item">
-              <dt>Código de verificación manual</dt>
-              <dd className="mono-text code-highlight">{resultado.codigo_verificacion}</dd>
-            </div>
             <div className="details-item">
               <dt>Vigencia</dt>
               <dd>
@@ -496,8 +616,12 @@ export function EmitirDocumentoPage() {
               Descargar PDF
             </a>
 
-            <button type="button" className="btn btn-secondary" onClick={copiarEnlace}>
-              {copiado ? '¡Enlace copiado!' : 'Copiar enlace'}
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => copiarValor('enlace', resultado.url_verificacion)}
+            >
+              {copiadoCampo === 'enlace' ? 'Copiado' : 'Copiar enlace'}
             </button>
 
             <Link
