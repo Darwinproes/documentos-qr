@@ -91,6 +91,45 @@ Revisión del orquestador (2026-10-28): P1–P6 **aprobados**. Corrí las prueba
 - [x] O9 — D1–D10 y P1–P7 revisados; `emitir-documento` v6 desplegada; push 8753adc (autorizado por el usuario) publicado por Render en ~3 min; JS publicado = build revisado (`index-bIN4V-vt.js`) — 2026-10-28
 - [x] O7 — Aceptación 2026-10-28 contra el sistema real: V1, V2, V3, V5, V8 (cancelar → CANCELADO), V9, V10 (consulta 21 → 429), V11; S1–S6 OK (anon sin acceso a tablas ni RPC, `token_hash` oculto, bitácora no se borra, consulta no cancela, sin secretos en el repo); S7: 61 líneas de log de funciones sin token, código ni URL `/v/`; S8: sin ERROR; CORS rechaza orígenes ajenos. Lighthouse en el sitio real: `/verificar` Rend. 95 · Acc. 100 · BP 100; `/v/…` 93 · 100 · 100. Cancelación por la interfaz pendiente de probar por el usuario.
 
+## Fase 3 — Pulido visual y QA automatizada (2026-10-28)
+
+Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright con el Chrome del sistema, 360/768/1440 px, 49 capturas):
+
+- **Pública (sitio real): 21/21 OK.** Pestañas con teclado, mayúsculas automáticas, guion automático, validación al salir del campo, resumen de errores enfocado, VÁLIDO / NO REGISTRADO por folio, por archivo y por QR, archivo alterado detectado, enlaces, `/v` mal formado, botón atrás, sin desborde, Atkinson cargada. Documento de QA en el registro: **CONST-2026-000002** («QA automatizado…»).
+- **Panel (copia local + Supabase simulado, sin cuentas reales):** login correcto/incorrecto, búsqueda, filtro, detalle, descargar PDF, modal de cancelar (foco, Esc, trampa de foco) y permisos por rol OK. El resto quedó pendiente por ajustes del script, que pasan a Q2.
+- **Hallazgos de diseño:** menú completo antes del contenido en móvil; tabla con folio en 3 líneas; datos y avisos duplicados; UUID visibles; dominio partido en dos líneas; casillas de 18 px; 1 botón sin nombre accesible; consultas sin sesión (401).
+- Reglas nuevas en `design-system/.../pages/decisiones-proyecto.md` → *Fase 3*.
+
+### Orquestador
+
+- [x] O10 — Migración `panel_resumen_bitacora`: `rpc('resumen_documentos')` y `rpc('bitacora_documento')` aplicadas y probadas (consulta sí, anónimo no); contrato actualizado — 2026-10-28
+- [ ] O11 — Revisar F1–F14 y Q1–Q5, volver a correr la QA completa, probar en el sitio real VENCIDO y CANCELADO con el documento de QA y publicar
+
+### Antigravity (`tareas/ANTIGRAVITY-FASE3.md`)
+
+- [ ] F1 — Navegación del panel en móvil/tableta (barra superior + panel lateral)
+- [ ] F2 — Tabla de documentos compacta (folio en una línea, fila enlazable)
+- [ ] F3 — Indicadores Vigentes / Por vencer / Vencidos / Cancelados
+- [ ] F4 — Tarjetas compactas en móvil
+- [ ] F5 — Detalle sin duplicados; bitácora con nombres; huella abreviada
+- [ ] F6 — Resultado público como lista de comparación
+- [ ] F7 — Un solo aviso de dominio; dominio sin partir
+- [ ] F8 — Encabezado público solo con «Verificar documento»
+- [ ] F9 — Ayuda visual en `/verificar` (dónde están el folio y el código)
+- [ ] F10 — Usuarios: interruptor de 44 px, sin UUID, guardar solo si hay cambios
+- [ ] F11 — Textos (cerrar sesión, plurales, «por defecto»)
+- [ ] F12 — Botón sin nombre accesible
+- [ ] F13 — No consultar sin sesión
+- [ ] F14 — Rendimiento (R9/R10)
+
+### Codex (`tareas/CODEX-FASE3.md`)
+
+- [ ] Q1 — Supabase simulado en `qa/`
+- [ ] Q2 — Pruebas de interfaz pública y del panel
+- [ ] Q3 — Auditoría automática por pantalla y reporte
+- [ ] Q4 — `npm run qa:publica` / `qa:panel`
+- [ ] Q5 — Integración continua en GitHub Actions
+
 ## Pendientes del responsable (usuario)
 
 - [x] Regla Rewrite en Render (`/*` → `/index.html`) — 2026-10-28; V1 confirmado: QR escaneado desde iPhone → `valido` para CONST-2026-000001.

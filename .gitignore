@@ -9,3 +9,6 @@ supabase/tests/salida/
 *.bak
 debug.log
 *.tsbuildinfo
+web/capturas-fase3/
+qa/salida/
+qa/node_modules/

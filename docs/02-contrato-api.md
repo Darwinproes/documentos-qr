@@ -148,6 +148,8 @@ Respuesta `200` (o `429` cuando `resultado = "limite_excedido"`, con el mismo cu
 | Alta / edición de tipos | `from('tipos_documento').insert/update(...)` (en update no se puede cambiar `clave` ni `prefijo_folio`) | admin |
 | Usuarios | `from('perfiles').select(...)` / `.update({nombre, area, rol, activo})` | admin |
 | Saber mi rol | `rpc('rol_actual')` | todos |
+| Indicadores de la lista (fase 3) | `rpc('resumen_documentos')` → `{ vigentes, por_vencer, vencidos, cancelados, total }` (`por_vencer` = vigentes que vencen en ≤ 30 días; `vencidos` = vigentes con `vigente_hasta` pasada) | activos |
+| Bitácora con nombres (fase 3) | `rpc('bitacora_documento', { p_documento_id })` → filas `{ id, accion, actor_nombre, actor_area, detalle, creado_en }` ordenadas; usar en lugar de `from('bitacora')` en el detalle | activos |
 
 Los usuarios se dan de alta en el piloto desde el panel de Supabase (Authentication → Users). Al crearse quedan con rol `consulta`; un admin les cambia el rol.
 
