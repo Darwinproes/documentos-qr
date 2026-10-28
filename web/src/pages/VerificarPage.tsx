@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { EsqueletoResultado } from '../components/Esqueletos';
 import { LayoutPublico } from '../components/LayoutPublico';
 import { ResultadoVerificacionVista } from '../components/ResultadoVerificacionVista';
 import { EJEMPLOS_SIMULADOS, esModoSimulado, verificar } from '../lib/api';
@@ -13,70 +14,139 @@ import {
 } from '../lib/formato';
 import { ORG_NOMBRE } from '../lib/supabase';
 import { ErrorApi, MetodoVerificacion, RespuestaVerificacion } from '../lib/tipos';
+import {
+  formatearTamanoBytes,
+  useCargaDiferida,
+  useTituloDocumento
+} from '../lib/useCargaDiferida';
 
 type PestanaActiva = 'manual' | 'archivo';
 
 const MAX_BYTES_PDF = 10 * 1024 * 1024; // 10 MB
 
+interface ErroresCampos {
+  folio?: string;
+  codigo?: string;
+  archivo?: string;
+}
+
 export function VerificarPage() {
+  useTituloDocumento('Verificación de documento');
+
   const [pestana, setPestana] = useState<PestanaActiva>('manual');
+  const tabManualRef = useRef<HTMLButtonElement | null>(null);
+  const tabArchivoRef = useRef<HTMLButtonElement | null>(null);
+  const resumenErroresRef = useRef<HTMLDivElement | null>(null);
+  const inputFolioRef = useRef<HTMLInputElement | null>(null);
+  const inputCodigoRef = useRef<HTMLInputElement | null>(null);
+  const inputArchivoRef = useRef<HTMLInputElement | null>(null);
 
   // Estado pestaña manual
   const [folio, setFolio] = useState<string>('');
   const [codigo, setCodigo] = useState<string>('');
+  const [erroresCampos, setErroresCampos] = useState<ErroresCampos>({});
+  const [mostrarResumenErrores, setMostrarResumenErrores] = useState<boolean>(false);
 
   // Estado pestaña archivo
-  const [archivoNombre, setArchivoNombre] = useState<string | null>(null);
+  const [archivoInfo, setArchivoInfo] = useState<{ nombre: string; tamano: number } | null>(null);
   const [archivoHash, setArchivoHash] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState<boolean>(false);
-  const inputArchivoRef = useRef<HTMLInputElement | null>(null);
 
   // Estado compartido de consulta
   const [cargando, setCargando] = useState<boolean>(false);
-  const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
+  const mostrarEsqueleto = useCargaDiferida(cargando, 300);
   const [errorRed, setErrorRed] = useState<string | null>(null);
   const [respuesta, setRespuesta] = useState<RespuestaVerificacion | null>(null);
   const [metodoUltimaConsulta, setMetodoUltimaConsulta] = useState<MetodoVerificacion>('manual');
 
-  const cambiarPestana = (nueva: PestanaActiva) => {
+  const cambiarPestana = (nueva: PestanaActiva, enfocarTab = false) => {
     setPestana(nueva);
-    setErrorValidacion(null);
+    setErroresCampos({});
+    setMostrarResumenErrores(false);
     setErrorRed(null);
     setRespuesta(null);
+    if (enfocarTab) {
+      setTimeout(() => {
+        if (nueva === 'manual') tabManualRef.current?.focus();
+        else tabArchivoRef.current?.focus();
+      }, 0);
+    }
+  };
+
+  const manejarKeyDownTabs = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const siguiente: PestanaActiva = pestana === 'manual' ? 'archivo' : 'manual';
+      cambiarPestana(siguiente, true);
+    }
+  };
+
+  const validarCampoFolio = (valor: string): string | undefined => {
+    const norm = normalizarFolio(valor);
+    if (!norm) return 'Ingrese el folio del documento.';
+    if (!validarFormatoFolio(norm)) {
+      return 'El formato del folio no es válido (ejemplo: CONST-2026-000001).';
+    }
+    return undefined;
+  };
+
+  const validarCampoCodigo = (valor: string): string | undefined => {
+    const norm = normalizarCodigo(valor);
+    if (!norm) return 'Ingrese el código de verificación.';
+    if (!validarFormatoCodigo(norm)) {
+      return 'El código debe tener 10 caracteres alfanuméricos (ejemplo: 7KQ2M-XA9PD).';
+    }
+    return undefined;
+  };
+
+  const manejarBlurFolio = () => {
+    if (!folio.trim()) return;
+    const msg = validarCampoFolio(folio);
+    setErroresCampos((prev) => ({ ...prev, folio: msg }));
+  };
+
+  const manejarBlurCodigo = () => {
+    if (!codigo.trim()) return;
+    const msg = validarCampoCodigo(codigo);
+    setErroresCampos((prev) => ({ ...prev, codigo: msg }));
   };
 
   const manejarSubmitManual = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorValidacion(null);
     setErrorRed(null);
     setRespuesta(null);
 
-    const folioNorm = normalizarFolio(folio);
-    const codigoNorm = normalizarCodigo(codigo);
+    const errFolio = validarCampoFolio(folio);
+    const errCodigo = validarCampoCodigo(codigo);
+    const nuevosErrores: ErroresCampos = {
+      folio: errFolio,
+      codigo: errCodigo
+    };
+    setErroresCampos(nuevosErrores);
 
-    if (!validarFormatoFolio(folioNorm)) {
-      setErrorValidacion('Ingrese un folio con formato válido (por ejemplo: CONST-2026-000001).');
+    if (errFolio || errCodigo) {
+      setMostrarResumenErrores(true);
+      setTimeout(() => {
+        resumenErroresRef.current?.focus();
+      }, 0);
       return;
     }
 
-    if (!validarFormatoCodigo(codigoNorm)) {
-      setErrorValidacion('Ingrese el código de verificación de 10 caracteres impreso en el documento.');
-      return;
-    }
-
+    setMostrarResumenErrores(false);
     setCargando(true);
     setMetodoUltimaConsulta('manual');
 
     try {
       const res = await verificar({
         metodo: 'manual',
-        folio: folioNorm,
-        codigo: codigoNorm
+        folio: normalizarFolio(folio),
+        codigo: normalizarCodigo(codigo)
       });
       setRespuesta(res);
     } catch (err) {
       if (err instanceof ErrorApi) {
-        setErrorValidacion(err.message);
+        setErroresCampos({ folio: err.message });
+        setMostrarResumenErrores(true);
       } else {
         setErrorRed('No se pudo consultar. Revise su conexión.');
       }
@@ -86,26 +156,26 @@ export function VerificarPage() {
   };
 
   const procesarArchivoPdf = async (archivo: File) => {
-    setErrorValidacion(null);
+    setErroresCampos({});
+    setMostrarResumenErrores(false);
     setErrorRed(null);
     setRespuesta(null);
-    setArchivoNombre(null);
+    setArchivoInfo({ nombre: archivo.name, tamano: archivo.size });
     setArchivoHash(null);
 
     const nombreLower = archivo.name.toLowerCase();
     if (!nombreLower.endsWith('.pdf') && archivo.type !== 'application/pdf') {
-      setErrorValidacion('Seleccione únicamente un archivo en formato PDF (.pdf).');
+      setErroresCampos({ archivo: 'Seleccione únicamente un archivo en formato PDF (.pdf).' });
       return;
     }
 
     if (archivo.size > MAX_BYTES_PDF) {
-      setErrorValidacion('El archivo supera el tamaño máximo permitido de 10 MB.');
+      setErroresCampos({ archivo: 'El archivo supera el tamaño máximo permitido de 10 MB.' });
       return;
     }
 
     setCargando(true);
     setMetodoUltimaConsulta('archivo');
-    setArchivoNombre(archivo.name);
 
     try {
       const sha256 = await calcularSha256Archivo(archivo);
@@ -117,7 +187,7 @@ export function VerificarPage() {
       setRespuesta(res);
     } catch (err) {
       if (err instanceof ErrorApi) {
-        setErrorValidacion(err.message);
+        setErroresCampos({ archivo: err.message });
       } else {
         setErrorRed('No se pudo consultar. Revise su conexión.');
       }
@@ -142,6 +212,29 @@ export function VerificarPage() {
     }
   };
 
+  const manejarKeyDownDropzone = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      inputArchivoRef.current?.click();
+    }
+  };
+
+  const limpiarParaVerificarOtro = () => {
+    setRespuesta(null);
+    setErrorRed(null);
+    setErroresCampos({});
+    setMostrarResumenErrores(false);
+    if (pestana === 'manual') {
+      setTimeout(() => inputFolioRef.current?.focus(), 0);
+    } else {
+      setArchivoInfo(null);
+      setArchivoHash(null);
+      if (inputArchivoRef.current) inputArchivoRef.current.value = '';
+    }
+  };
+
+  const hayErroresResumen = Boolean(erroresCampos.folio || erroresCampos.codigo);
+
   return (
     <LayoutPublico verificadoEn={respuesta?.verificado_en}>
       <div className="public-container">
@@ -154,11 +247,18 @@ export function VerificarPage() {
         </div>
 
         <div className="card tabs-card">
-          <div className="tabs-header" role="tablist" aria-label="Métodos de verificación">
+          <div
+            className="tabs-header"
+            role="tablist"
+            aria-label="Métodos de verificación"
+            onKeyDown={manejarKeyDownTabs}
+          >
             <button
+              ref={tabManualRef}
               type="button"
               role="tab"
               id="tab-manual"
+              tabIndex={pestana === 'manual' ? 0 : -1}
               aria-selected={pestana === 'manual'}
               aria-controls="panel-manual"
               className={`tab-btn ${pestana === 'manual' ? 'tab-btn-active' : ''}`}
@@ -167,9 +267,11 @@ export function VerificarPage() {
               Folio y código
             </button>
             <button
+              ref={tabArchivoRef}
               type="button"
               role="tab"
               id="tab-archivo"
+              tabIndex={pestana === 'archivo' ? 0 : -1}
               aria-selected={pestana === 'archivo'}
               aria-controls="panel-archivo"
               className={`tab-btn ${pestana === 'archivo' ? 'tab-btn-active' : ''}`}
@@ -186,23 +288,86 @@ export function VerificarPage() {
               aria-labelledby="tab-manual"
               className="tab-panel"
             >
+              {mostrarResumenErrores && hayErroresResumen && (
+                <div
+                  ref={resumenErroresRef}
+                  tabIndex={-1}
+                  className="alert alert-error error-summary"
+                  role="alert"
+                  aria-labelledby="resumen-errores-titulo"
+                >
+                  <p id="resumen-errores-titulo" className="error-summary-title">
+                    Revise los siguientes campos antes de continuar:
+                  </p>
+                  <ul className="error-summary-list">
+                    {erroresCampos.folio && (
+                      <li>
+                        <a
+                          href="#input-folio"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            inputFolioRef.current?.focus();
+                          }}
+                        >
+                          Folio: {erroresCampos.folio}
+                        </a>
+                      </li>
+                    )}
+                    {erroresCampos.codigo && (
+                      <li>
+                        <a
+                          href="#input-codigo"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            inputCodigoRef.current?.focus();
+                          }}
+                        >
+                          Código: {erroresCampos.codigo}
+                        </a>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
               <form onSubmit={manejarSubmitManual} noValidate className="form-stack">
                 <div className="form-group">
                   <label htmlFor="input-folio" className="form-label">
                     Folio del documento
                   </label>
                   <input
+                    ref={inputFolioRef}
                     id="input-folio"
                     type="text"
-                    className="form-input mono-text"
-                    placeholder="CONST-2026-000001"
-                    value={folio}
-                    onChange={(e) => setFolio(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                    inputMode="text"
+                    autoCapitalize="characters"
                     autoComplete="off"
                     spellCheck={false}
+                    className={`form-input mono-text ${erroresCampos.folio ? 'form-input-invalid' : ''}`}
+                    placeholder="CONST-2026-000001"
+                    value={folio}
+                    aria-invalid={Boolean(erroresCampos.folio)}
+                    aria-describedby={
+                      erroresCampos.folio ? 'hint-folio error-folio' : 'hint-folio'
+                    }
+                    onChange={(e) => {
+                      const nuevo = e.target.value.toUpperCase().replace(/\s+/g, '');
+                      setFolio(nuevo);
+                      if (erroresCampos.folio) {
+                        setErroresCampos((prev) => ({ ...prev, folio: undefined }));
+                      }
+                    }}
+                    onBlur={manejarBlurFolio}
                     required
                   />
-                  <span className="form-hint">Formato: PREFIJO-AAAA-NNNNNN</span>
+                  <span id="hint-folio" className="form-hint">
+                    Formato: PREFIJO-AAAA-NNNNNN
+                  </span>
+                  {erroresCampos.folio && (
+                    <span id="error-folio" className="field-error-text" role="alert">
+                      {erroresCampos.folio}
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -210,20 +375,48 @@ export function VerificarPage() {
                     Código de verificación
                   </label>
                   <input
+                    ref={inputCodigoRef}
                     id="input-codigo"
                     type="text"
-                    className="form-input mono-text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className={`form-input mono-text ${erroresCampos.codigo ? 'form-input-invalid' : ''}`}
                     placeholder="7KQ2M-XA9PD"
                     maxLength={13}
                     value={codigo}
-                    onChange={(e) => setCodigo(formatearCodigoVisual(e.target.value))}
-                    autoComplete="off"
-                    spellCheck={false}
+                    aria-invalid={Boolean(erroresCampos.codigo)}
+                    aria-describedby={
+                      erroresCampos.codigo ? 'hint-codigo error-codigo' : 'hint-codigo'
+                    }
+                    onChange={(e) => {
+                      const formateado = formatearCodigoVisual(e.target.value);
+                      setCodigo(formateado);
+                      if (erroresCampos.codigo) {
+                        setErroresCampos((prev) => ({ ...prev, codigo: undefined }));
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pegado = e.clipboardData.getData('text');
+                      const formateado = formatearCodigoVisual(pegado);
+                      setCodigo(formateado);
+                      if (erroresCampos.codigo) {
+                        setErroresCampos((prev) => ({ ...prev, codigo: undefined }));
+                      }
+                    }}
+                    onBlur={manejarBlurCodigo}
                     required
                   />
-                  <span className="form-hint">
-                    10 caracteres impresos debajo del código QR (se aceptan con o sin guion).
+                  <span id="hint-codigo" className="form-hint">
+                    10 caracteres impresos debajo del código QR (inserta el guion automáticamente).
                   </span>
+                  {erroresCampos.codigo && (
+                    <span id="error-codigo" className="field-error-text" role="alert">
+                      {erroresCampos.codigo}
+                    </span>
+                  )}
                 </div>
 
                 <button type="submit" className="btn btn-primary btn-block" disabled={cargando}>
@@ -241,13 +434,22 @@ export function VerificarPage() {
               className="tab-panel"
             >
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Zona para arrastrar o elegir archivo PDF (máximo 10 MB)"
                 className={`dropzone ${arrastrando ? 'dropzone-active' : ''}`}
+                onKeyDown={manejarKeyDownDropzone}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setArrastrando(true);
                 }}
                 onDragLeave={() => setArrastrando(false)}
                 onDrop={manejarDrop}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).tagName !== 'BUTTON') {
+                    inputArchivoRef.current?.click();
+                  }
+                }}
               >
                 <input
                   ref={inputArchivoRef}
@@ -256,6 +458,7 @@ export function VerificarPage() {
                   accept=".pdf,application/pdf"
                   className="sr-only"
                   onChange={manejarSeleccionArchivo}
+                  tabIndex={-1}
                 />
                 <svg
                   className="dropzone-icon"
@@ -275,14 +478,22 @@ export function VerificarPage() {
                   Arrastre aquí el archivo PDF o selecciónelo desde su dispositivo
                 </p>
                 <p className="dropzone-subtitle">Solo archivos .pdf (máximo 10 MB)</p>
-                <label htmlFor="input-archivo-pdf" className="btn btn-secondary">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    inputArchivoRef.current?.click();
+                  }}
+                >
                   Elegir archivo PDF
-                </label>
+                </button>
 
-                {archivoNombre && (
-                  <div className="file-meta-box">
+                {archivoInfo && (
+                  <div className="file-meta-box" onClick={(e) => e.stopPropagation()}>
                     <p className="file-meta-name">
-                      Archivo analizado: <strong>{archivoNombre}</strong>
+                      Archivo seleccionado: <strong>{archivoInfo.nombre}</strong> (
+                      {formatearTamanoBytes(archivoInfo.tamano)})
                     </p>
                     {archivoHash && (
                       <p className="file-meta-hash">
@@ -293,34 +504,33 @@ export function VerificarPage() {
                 )}
               </div>
 
+              {erroresCampos.archivo && (
+                <div className="field-error-text mt-xs" role="alert">
+                  {erroresCampos.archivo}
+                </div>
+              )}
+
               <p className="privacy-notice">
                 Su archivo no se envía a ningún servidor; solo se calcula su huella digital.
               </p>
             </div>
           )}
 
-          {errorValidacion && (
-            <div className="alert alert-error" role="alert" aria-live="assertive">
-              {errorValidacion}
-            </div>
-          )}
-
           {errorRed && (
-            <div className="alert alert-error" role="alert" aria-live="assertive">
+            <div className="alert alert-error mx-panel" role="alert" aria-live="assertive">
               {errorRed}
             </div>
           )}
         </div>
 
-        {cargando && (
-          <div className="card state-card" role="status" aria-live="polite">
-            <div className="spinner" aria-hidden="true" />
-            <p className="state-text">Verificando autenticidad…</p>
-          </div>
-        )}
+        {cargando && mostrarEsqueleto && <EsqueletoResultado />}
 
         {!cargando && respuesta && (
-          <ResultadoVerificacionVista respuesta={respuesta} metodo={metodoUltimaConsulta} />
+          <ResultadoVerificacionVista
+            respuesta={respuesta}
+            metodo={metodoUltimaConsulta}
+            onVerificarOtro={limpiarParaVerificarOtro}
+          />
         )}
 
         {esModoSimulado() && (
@@ -334,7 +544,7 @@ export function VerificarPage() {
                 type="button"
                 className="btn btn-sm btn-outline"
                 onClick={() => {
-                  setPestana('manual');
+                  cambiarPestana('manual');
                   setFolio(EJEMPLOS_SIMULADOS.folioValido);
                   setCodigo(EJEMPLOS_SIMULADOS.codigoValido);
                 }}
@@ -345,7 +555,7 @@ export function VerificarPage() {
                 type="button"
                 className="btn btn-sm btn-outline"
                 onClick={() => {
-                  setPestana('manual');
+                  cambiarPestana('manual');
                   setFolio(EJEMPLOS_SIMULADOS.folioVencido);
                   setCodigo(EJEMPLOS_SIMULADOS.codigoVencido);
                 }}
@@ -356,7 +566,7 @@ export function VerificarPage() {
                 type="button"
                 className="btn btn-sm btn-outline"
                 onClick={() => {
-                  setPestana('manual');
+                  cambiarPestana('manual');
                   setFolio(EJEMPLOS_SIMULADOS.folioCancelado);
                   setCodigo(EJEMPLOS_SIMULADOS.codigoCancelado);
                 }}
@@ -367,7 +577,7 @@ export function VerificarPage() {
                 type="button"
                 className="btn btn-sm btn-outline"
                 onClick={() => {
-                  setPestana('manual');
+                  cambiarPestana('manual');
                   setFolio('CONST-2026-000404');
                   setCodigo('ABCDE-12345');
                 }}
@@ -378,7 +588,7 @@ export function VerificarPage() {
                 type="button"
                 className="btn btn-sm btn-outline"
                 onClick={() => {
-                  setPestana('manual');
+                  cambiarPestana('manual');
                   setFolio(EJEMPLOS_SIMULADOS.folioLimite);
                   setCodigo(EJEMPLOS_SIMULADOS.codigoLimite);
                 }}

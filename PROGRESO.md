@@ -22,7 +22,7 @@ El proyecto también tiene tablas de un prototipo anterior de tickets (`profiles
 - [x] O3 — Pruebas de la base: E1, E2, E3, E5, E6, V1, V2, V4, V5, V6, V8–V12, S1–S5 OK (en transacción revertida) — 2026-10-28
 - [x] O4 — Security Advisor: sin ERROR. WARN intencionales: `cancelar_documento` y `rol_actual` (validan rol internamente) — 2026-10-28
 - [x] O5 — Edge Functions `verificar` (sin JWT) y `emitir-documento` (con JWT) desplegadas v1 tras R6; faltan secrets (los captura el usuario en el panel) — 2026-10-28
-- [x] O6 — Sitio Render `documentos-qr` → https://documentos-qr.onrender.com (repo Darwinproes/documentos-qr, autodeploy main); falta regla Rewrite `/*` → `/index.html` — 2026-10-28
+- [x] O6 — Sitio Render `documentos-qr` → https://documentos-qr.onrender.com (repo Darwinproes/documentos-qr, autodeploy main); Rewrite `/*` → `/index.html` activa — 2026-10-28
 - [ ] O7 — Correr las pruebas de aceptación completas (`docs/04-pruebas-aceptacion.md`) y el script de integración
 - [ ] O8 — Informe final del piloto
 
@@ -66,13 +66,18 @@ Prueba manual del usuario: **funcional** (emitió CONST-2026-000001; verificaci�
 
 ### Codex (`tareas/CODEX-DISENO.md`)
 
-- [ ] P1 — Marca en el PDF (color, logo opcional)
-- [ ] P2 — Área emisora en el PDF
-- [ ] P3 — Rejilla etiqueta/valor
-- [ ] P4 — Pie con folio y "Página n de N"
-- [ ] P5 — Bloque de verificación (QR 120 pt, código en Courier-Bold)
-- [ ] P6 — Saltos de página limpios
-- [ ] P7 — Pruebas y PDFs de ejemplo
+- [x] P1 — Marca en el PDF — 2026-10-28: Línea y título azul `#0F2D52`; usa `assets/logo.png` si está disponible y deja el nombre de la organización como alternativa.
+- [x] P2 — Área emisora en el PDF — 2026-10-28: La función consulta `perfiles.area` del emisor y lo incluye con la etiqueta «Área emisora».
+- [x] P3 — Rejilla etiqueta/valor — 2026-10-28: Campos en dos columnas con etiquetas y orden alineados a la página de verificación.
+- [x] P4 — Pie con folio y "Página n de N" — 2026-10-28: Pie centrado en todas las páginas, con folio y dominio verificable.
+- [x] P5 — Bloque de verificación — 2026-10-28: QR de 120 pt con zona blanca, encabezado de autenticidad y código en Courier-Bold 12 pt.
+- [x] P6 — Saltos de página limpios — 2026-10-28: Al continuar una página repite organización y folio; el recuadro de verificación se conserva unido.
+- [x] P7 — (validado por el orquestador 2026-10-28: `deno check` y `deno test` 7/7 sin `--no-check`; PDFs revisados; `emitir-documento` v6 desplegada) — 2026-10-28: La prueba genera casos de área, sin logo y tres páginas y escribe `ejemplo.pdf`/`ejemplo-largo.pdf`; tras R7–R8, el orquestador debe repetir `deno check`, `deno test` y revisar ambos PDFs.
+
+Revisión del orquestador (2026-10-28): P1–P6 **aprobados**. Corrí las pruebas con Deno 2.1.4: 7/7 OK con `--no-check`; `ejemplo.pdf` y `ejemplo-largo.pdf` revisados (marca, rejilla, área emisora, «Página 3 de 3», bloque unido). `deno check` de las funciones OK. Ajustes siguientes implementados por Codex; falta revalidarlos:
+
+- [x] R7 (Codex 2026-10-28) — `fixture()` ahora devuelve `DatosPdf` y construye un `Record<string, string>` sin claves ausentes; revalidar con `deno check` y `deno test` sin `--no-check`.
+- [x] R8 (Codex 2026-10-28) — `pdf.ts` usa 15 pt de interlineado para valores de 11 pt y mantiene 8 pt entre filas; revisar el PDF largo tras regenerarlo.
 
 ### Orquestador
 
@@ -81,7 +86,7 @@ Prueba manual del usuario: **funcional** (emitió CONST-2026-000001; verificaci�
 
 ## Pendientes del responsable (usuario)
 
-- [ ] **Urgente:** regla Rewrite en Render (`/*` → `/index.html`). Sin ella, escanear el QR da 404.
+- [x] Regla Rewrite en Render (`/*` → `/index.html`) — 2026-10-28; V1 confirmado: QR escaneado desde iPhone → `valido` para CONST-2026-000001.
 - [ ] Enviar el logo oficial de PROESA (SVG o PNG con fondo transparente) para el sitio y el PDF.
 - [ ] Activar *Leaked password protection* en Supabase → Authentication → Policies.
 - [ ] Confirmar la zona horaria (se usa `America/Mexico_City`).

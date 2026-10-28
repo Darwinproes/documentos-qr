@@ -43,10 +43,18 @@ Deno.serve(async (request) => {
   const urlVerificacion = `${baseUrl.origin}/v/${token}`;
   const path = `${tipo.toUpperCase()}/${folio.split("-")[1]}/${folio}.pdf`;
   try {
+    const { data: perfilEmisor, error: perfilError } = await service.from("perfiles")
+      .select("area")
+      .eq("id", userResult.user.id)
+      .maybeSingle();
+    if (perfilError) throw perfilError;
+    const areaEmisora = typeof perfilEmisor?.area === "string" && perfilEmisor.area.trim()
+      ? perfilEmisor.area.trim()
+      : null;
     const campos = Array.isArray(record.campos) ? record.campos as { clave: string; etiqueta: string; tipo: string }[] : [];
     const pdf = await generarPdf({
       orgNombre: Deno.env.get("ORG_NOMBRE") ?? "PROESA Electrónica", tipoNombre: String(record.tipo_nombre), folio,
-      destinatario: String(record.destinatario), campos, datos: (record.datos ?? {}) as Record<string, string>,
+      destinatario: String(record.destinatario), areaEmisora, campos, datos: (record.datos ?? {}) as Record<string, string>,
       emitidoEn: String(record.emitido_en), vigenteHasta: record.vigente_hasta ? String(record.vigente_hasta) : null,
       urlVerificacion, codigo, dominioOficial: baseUrl.host,
     });

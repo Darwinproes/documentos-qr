@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { EsqueletoResultado } from '../components/Esqueletos';
 import { LayoutPublico } from '../components/LayoutPublico';
 import { ResultadoVerificacionVista } from '../components/ResultadoVerificacionVista';
 import { verificar } from '../lib/api';
 import { validarFormatoToken } from '../lib/formato';
 import { ErrorApi, RespuestaVerificacion } from '../lib/tipos';
+import { useCargaDiferida, useTituloDocumento } from '../lib/useCargaDiferida';
 
 export function VerificacionTokenPage() {
+  useTituloDocumento('Resultado de verificación');
+
   const { token = '' } = useParams<{ token: string }>();
   const [cargando, setCargando] = useState<boolean>(true);
+  const mostrarEsqueleto = useCargaDiferida(cargando, 300);
   const [enlaceInvalido, setEnlaceInvalido] = useState<boolean>(false);
   const [errorRed, setErrorRed] = useState<string | null>(null);
   const [respuesta, setRespuesta] = useState<RespuestaVerificacion | null>(null);
@@ -68,7 +73,7 @@ export function VerificacionTokenPage() {
       }
     }
 
-    consultarToken();
+    void consultarToken();
 
     return () => {
       cancelado = true;
@@ -80,17 +85,23 @@ export function VerificacionTokenPage() {
       <div className="public-container">
         <h1 className="sr-only">Resultado de verificación de documento</h1>
 
-        {cargando && (
-          <div className="card state-card" role="status" aria-live="polite">
-            <div className="spinner" aria-hidden="true" />
-            <p className="state-text">Consultando el registro oficial de documentos…</p>
-          </div>
-        )}
+        {cargando && mostrarEsqueleto && <EsqueletoResultado />}
 
         {!cargando && enlaceInvalido && (
           <div className="card state-card state-invalid-link" role="alert" aria-live="assertive">
-            <svg className="status-icon text-danger" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            <svg
+              className="status-icon text-danger"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+              />
             </svg>
             <h2 className="state-heading">El enlace no es válido</h2>
             <p className="state-description">
@@ -120,16 +131,7 @@ export function VerificacionTokenPage() {
           </div>
         )}
 
-        {!cargando && respuesta && (
-          <>
-            <ResultadoVerificacionVista respuesta={respuesta} metodo="qr" />
-            <div className="verify-another-bar">
-              <Link to="/verificar" className="btn btn-secondary">
-                Verificar otro documento o validar archivo PDF
-              </Link>
-            </div>
-          </>
-        )}
+        {!cargando && respuesta && <ResultadoVerificacionVista respuesta={respuesta} metodo="qr" />}
       </div>
     </LayoutPublico>
   );
