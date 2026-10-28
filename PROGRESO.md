@@ -66,7 +66,7 @@ Prueba manual del usuario: **funcional** (emitió CONST-2026-000001; verificaci�
 
 Revisión del orquestador (2026-10-28): D1–D10 **aprobados para publicar**. Compilación limpia en copia aparte (`npm ci` + `npm run build`); 0 hex fuera de `:root`; Atkinson auto-hospedada (sin Google Fonts); sin secretos, `innerHTML` ni `console.log`; llamadas a funciones iguales al contrato; logo provisional solo recoloreado. Lighthouse 12.2.1 (móvil simulado, `vite preview`): **Accesibilidad 100** en `/verificar`, `/v/:token` y `/panel/login`; Mejores prácticas 79–82 solo por HTTP local y CORS de `localhost`; **Rendimiento 84** en `/verificar` (no ≥ 98 como se anotó): FCP 2.6 s, LCP 3.2 s, 131 KiB de JS sin usar. A 412 px no hay desplazamiento horizontal.
 
-- [ ] R9 (media, después de publicar) — Dividir el paquete: cargar las rutas `/panel/*` con `React.lazy` + `Suspense` y que `/v/:token` y `/verificar` no importen el cliente de Supabase ni el panel (en `api.ts`, `import('./supabase')` dinámico solo dentro de `emitirDocumento`). Meta: Rendimiento ≥ 90 en `/verificar` medido con Lighthouse móvil y anotar el número real.
+- [ ] R9 (baja: en el sitio real ya da 95; mejora opcional) — Dividir el paquete: cargar las rutas `/panel/*` con `React.lazy` + `Suspense` y que `/v/:token` y `/verificar` no importen el cliente de Supabase ni el panel (en `api.ts`, `import('./supabase')` dinámico solo dentro de `emitirDocumento`). Meta: Rendimiento ≥ 90 en `/verificar` medido con Lighthouse móvil y anotar el número real.
 - [ ] R10 (baja) — CLS 0.098, al borde de 0.1: reservar alto de la banda de resultado y usar `font-display: swap` con métricas de respaldo ajustadas (`size-adjust`) para Atkinson.
 
 Nota: el orquestador corrió `npm ci` dentro de `web/` y falló a medias por un archivo bloqueado (servidor de desarrollo activo). Si `npm run dev` o `npm run build` fallan, correr `npm install` en `web/`.
@@ -88,8 +88,8 @@ Revisión del orquestador (2026-10-28): P1–P6 **aprobados**. Corrí las prueba
 
 ### Orquestador
 
-- [ ] O9 — D1–D10 y P1–P7 revisados; `emitir-documento` v6 desplegada. Falta: push a GitHub (autorización del usuario) y verificar el sitio real
-- [ ] O7 — Pruebas de aceptación completas (incluye V1 por QR desde celular y cancelación, que no se probaron)
+- [x] O9 — D1–D10 y P1–P7 revisados; `emitir-documento` v6 desplegada; push 8753adc (autorizado por el usuario) publicado por Render en ~3 min; JS publicado = build revisado (`index-bIN4V-vt.js`) — 2026-10-28
+- [x] O7 — Aceptación 2026-10-28 contra el sistema real: V1, V2, V3, V5, V8 (cancelar → CANCELADO), V9, V10 (consulta 21 → 429), V11; S1–S6 OK (anon sin acceso a tablas ni RPC, `token_hash` oculto, bitácora no se borra, consulta no cancela, sin secretos en el repo); S7: 61 líneas de log de funciones sin token, código ni URL `/v/`; S8: sin ERROR; CORS rechaza orígenes ajenos. Lighthouse en el sitio real: `/verificar` Rend. 95 · Acc. 100 · BP 100; `/v/…` 93 · 100 · 100. Cancelación por la interfaz pendiente de probar por el usuario.
 
 ## Pendientes del responsable (usuario)
 
