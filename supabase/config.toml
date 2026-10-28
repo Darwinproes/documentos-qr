@@ -1,0 +1,5 @@
+[functions.verificar]
+verify_jwt = false
+
+[functions.emitir-documento]
+verify_jwt = true
