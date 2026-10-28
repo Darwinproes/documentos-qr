@@ -39,13 +39,13 @@ Verificación local pendiente: este entorno no tiene Deno instalado; las pruebas
 
 ## Antigravity — frontend (`tareas/ANTIGRAVITY.md`)
 
-- [ ] A1 — Base del proyecto + modo simulado
-- [ ] A2 — Página pública `/v/:token`
-- [ ] A3 — `/verificar` (folio+código y archivo)
-- [ ] A4 — Login y estructura del panel
-- [ ] A5 — Lista y detalle de documentos
-- [ ] A6 — Emitir documento
-- [ ] A7 — Administración (tipos y usuarios)
+- [x] A1 — Base del proyecto + modo simulado — 2026-10-28: Vite 5.4.11 + React 18.3.1 + TS 5.6.3, cliente Supabase, tipos del contrato y `api.ts` con modo simulado (`VITE_API_SIMULADA=1`); probar con `cd web && npm run build`.
+- [x] A2 — Página pública `/v/:token` — 2026-10-28: Vista móvil primero con validación previa de token (43 chars), `noindex`, 5 estados con ícono/color/texto oficial y pie de dominio; probar en `/v/Qm9EjemploTokenValidoDe43CaracteresExactos1`.
+- [x] A3 — `/verificar` (folio+código y archivo) — 2026-10-28: Pestaña manual (normalización Crockford/folio) y pestaña PDF con cálculo local SHA-256 (`crypto.subtle.digest`, máx. 10 MB); probar en `/verificar`.
+- [x] A4 — Login y estructura del panel — 2026-10-28: Inicio de sesión con validación de perfil activo (`perfiles`), menú lateral por rol y cierre de sesión con nombre/rol; probar en `/panel/login`.
+- [x] A5 — Lista y detalle de documentos — 2026-10-28: Tabla paginada (25) con columnas explícitas, búsqueda `ilike`, filtros, descarga de PDF firmado, bitácora y modal de cancelación para admin; probar en `/panel` y `/panel/documentos/:id`.
+- [x] A6 — Emitir documento — 2026-10-28: Formulario dinámico desde `tipos_documento.campos`, opciones de vigencia, confirmación previa y pantalla final con enlace/código únicos y descarga; probar en `/panel/emitir`.
+- [x] A7 — Administración (tipos y usuarios) — 2026-10-28: CRUD de tipos con editor reordenable de campos (bloqueando `clave` y `prefijo_folio` en edición) y gestión de perfiles/roles; probar en `/panel/tipos` y `/panel/usuarios`.
 
 ## Pendientes del responsable (usuario)
 
@@ -74,6 +74,14 @@ Segunda revisión (orquestador): R1–R3 verificados en el PDF de ejemplo; 7/7 p
 Lo verifica el orquestador al desplegar:
 
 - [ ] R5 — Comprobar que un `X-Forwarded-For` enviado por el cliente **no** cambia el `ip_hash` (si lo cambia, el límite por IP se puede saltar).
+
+### Frontend (Antigravity) — 2026-10-28
+
+Resultado: **aprobado para desplegar**. `npm run build` sin errores (tsc + vite, 348 KB / 102 KB gzip). Llamadas a `verificar` y `emitir-documento` iguales al contrato; `documentos` siempre con columnas explícitas (`select('*')` solo en `bitacora` y `tipos_documento`, permitido); sin `service_role`, sin `innerHTML`, sin `console.log`; `.env.local` solo con publishable key y fuera de git; `lang="es-MX"` y `no-referrer`. Rutas `/`, `/verificar`, `/v/:token` y `/panel/login` responden 200 en `vite preview`.
+
+Pendiente (orquestador, después del despliegue): revisión visual a 360 px y pruebas P1–P5 contra el proyecto real.
+
+Nota: Render **no** lee `public/_redirects` (es formato de Netlify). La reescritura `/*` → `/index.html` se configura en el panel de Render; el archivo puede quedarse, no estorba.
 
 ## Preguntas al orquestador
 

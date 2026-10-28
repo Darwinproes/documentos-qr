@@ -20,13 +20,13 @@ export function normalizarCodigo(value: string): string {
   return value.replace(/[\s-]/g, "").toUpperCase().replace(/O/g, "0").replace(/[IL]/g, "1");
 }
 
-export async function leerCuerpoLimitado(request: Request): Promise<{ texto: string; error?: never } | { texto?: never; error: string }> {
+export async function leerCuerpoLimitado(request: Request): Promise<{ ok: true; texto: string } | { ok: false; error: string }> {
   const declaredHeader = request.headers.get("content-length");
   if (declaredHeader !== null) {
-    if (!/^\d+$/.test(declaredHeader)) return { error: "La longitud de la solicitud no es válida" };
-    if (Number(declaredHeader) > MAX_BODY_BYTES) return { error: "El cuerpo de la solicitud excede 32 KB" };
+    if (!/^\d+$/.test(declaredHeader)) return { ok: false, error: "La longitud de la solicitud no es válida" };
+    if (Number(declaredHeader) > MAX_BODY_BYTES) return { ok: false, error: "El cuerpo de la solicitud excede 32 KB" };
   }
-  if (!request.body) return { texto: "" };
+  if (!request.body) return { ok: true, texto: "" };
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -37,17 +37,17 @@ export async function leerCuerpoLimitado(request: Request): Promise<{ texto: str
       total += value.byteLength;
       if (total > MAX_BODY_BYTES) {
         await reader.cancel();
-        return { error: "El cuerpo de la solicitud excede 32 KB" };
+        return { ok: false, error: "El cuerpo de la solicitud excede 32 KB" };
       }
       chunks.push(value);
     }
   } catch {
-    return { error: "No se pudo leer la solicitud" };
+    return { ok: false, error: "No se pudo leer la solicitud" };
   }
   const bytes = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return { texto: new TextDecoder().decode(bytes) };
+  return { ok: true, texto: new TextDecoder().decode(bytes) };
 }
 
 export function objeto(value: unknown): value is Record<string, unknown> {

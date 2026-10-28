@@ -10,7 +10,7 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return responderOptions(request);
   if (request.method !== "POST") return respuestaError(request, 405, "METODO_NO_PERMITIDO", "Método HTTP no permitido");
   const readResult = await leerCuerpoLimitado(request);
-  if (readResult.error) return respuestaError(request, 400, "VALIDACION", readResult.error);
+  if (!readResult.ok) return respuestaError(request, 400, "VALIDACION", readResult.error);
   const raw = readResult.texto;
   let body: Record<string, unknown>;
   try { const parsed: unknown = JSON.parse(raw); if (!objeto(parsed)) throw new Error(); body = parsed; }

@@ -16,7 +16,7 @@ export interface DatosPdf {
   dominioOficial: string;
 }
 
-function seguro(text: string): string { return text.replace(/[^\x20-\x7E\xA0-\xFF]/g, "?"); }
+function seguro(text: string): string { return text.replace(/[^\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?"); }
 function fecha(value: string): string {
   const d = new Date(value);
   return new Intl.DateTimeFormat("es-MX", { timeZone: "America/Mexico_City", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
@@ -27,8 +27,20 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
     const words = paragraph.split(/\s+/).filter(Boolean);
     let line = "";
     for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (font.widthOfTextAtSize(candidate, size) > width && line) { lines.push(line); line = word; }
+      let remaining = word;
+      if (font.widthOfTextAtSize(remaining, size) > width) {
+        if (line) { lines.push(line); line = ""; }
+        let fragment = "";
+        for (const character of remaining) {
+          if (fragment && font.widthOfTextAtSize(fragment + character, size) > width) {
+            lines.push(fragment);
+            fragment = character;
+          } else fragment += character;
+        }
+        remaining = fragment;
+      }
+      const candidate = line ? `${line} ${remaining}` : remaining;
+      if (line && font.widthOfTextAtSize(candidate, size) > width) { lines.push(line); line = remaining; }
       else line = candidate;
     }
     if (line) lines.push(line);
@@ -77,7 +89,7 @@ export async function generarPdf(data: DatosPdf): Promise<Uint8Array> {
   const quietZone = 4;
   const qrSize = 110, moduleSize = qrSize / (moduleCount + quietZone * 2);
   const blockHeight = 150;
-  if (y - blockHeight < bottom) addPage();
+  if (y < bottom + blockHeight + 12) addPage();
   const boxY = bottom;
   page.drawRectangle({ x: margin, y: boxY, width, height: blockHeight, borderWidth: 1, borderColor: rgb(0.5, 0.58, 0.66) });
   const qx = margin + 12, qy = boxY + 20;

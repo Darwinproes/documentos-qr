@@ -8,3 +8,4 @@ supabase/.branches/
 supabase/tests/salida/
 *.bak
 debug.log
+*.tsbuildinfo
