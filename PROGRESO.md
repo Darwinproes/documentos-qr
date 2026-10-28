@@ -21,8 +21,8 @@ El proyecto también tiene tablas de un prototipo anterior de tickets (`profiles
 - [x] O2 — Esquema aplicado en Supabase (`documentos_qr_esquema_inicial`) + tipo `CONST` — 2026-10-28
 - [x] O3 — Pruebas de la base: E1, E2, E3, E5, E6, V1, V2, V4, V5, V6, V8–V12, S1–S5 OK (en transacción revertida) — 2026-10-28
 - [x] O4 — Security Advisor: sin ERROR. WARN intencionales: `cancelar_documento` y `rol_actual` (validan rol internamente) — 2026-10-28
-- [ ] O5 — Revisar el código de Codex, configurar secrets y desplegar las Edge Functions
-- [ ] O6 — Crear el sitio estático en Render con `web/` y fijar `VERIFICACION_BASE_URL` / `ALLOWED_ORIGINS`
+- [x] O5 — Edge Functions `verificar` (sin JWT) y `emitir-documento` (con JWT) desplegadas v1 tras R6; faltan secrets (los captura el usuario en el panel) — 2026-10-28
+- [x] O6 — Sitio Render `documentos-qr` → https://documentos-qr.onrender.com (repo Darwinproes/documentos-qr, autodeploy main); falta regla Rewrite `/*` → `/index.html` — 2026-10-28
 - [ ] O7 — Correr las pruebas de aceptación completas (`docs/04-pruebas-aceptacion.md`) y el script de integración
 - [ ] O8 — Informe final del piloto
 
@@ -47,8 +47,42 @@ Verificación local pendiente: este entorno no tiene Deno instalado; las pruebas
 - [x] A6 — Emitir documento — 2026-10-28: Formulario dinámico desde `tipos_documento.campos`, opciones de vigencia, confirmación previa y pantalla final con enlace/código únicos y descarga; probar en `/panel/emitir`.
 - [x] A7 — Administración (tipos y usuarios) — 2026-10-28: CRUD de tipos con editor reordenable de campos (bloqueando `clave` y `prefijo_folio` en edición) y gestión de perfiles/roles; probar en `/panel/tipos` y `/panel/usuarios`.
 
+## Fase 2 — Diseño (2026-10-28)
+
+Prueba manual del usuario: **funcional** (emitió CONST-2026-000001; verificación por folio+código y por archivo OK; archivo alterado → no encontrado). Sistema de diseño: `design-system/documentos-qr-proesa/MASTER.md` + `pages/decisiones-proyecto.md` (manda sobre MASTER).
+
+### Antigravity (`tareas/ANTIGRAVITY-DISENO.md`)
+
+- [ ] D1 — Tokens (0 hex fuera de `:root`)
+- [ ] D2 — Atkinson Hyperlegible auto-hospedada; folio/código monoespaciados
+- [ ] D3 — Jerarquía del resultado de verificación
+- [ ] D4 — Formulario `/verificar` (pestañas, máscaras, validación, archivo)
+- [ ] D5 — Esqueletos de carga
+- [ ] D6 — Lista del panel en tarjetas para móvil
+- [ ] D7 — Flujo de emisión por pasos + copiar + modal accesible
+- [ ] D8 — Movimiento reducido, cursor, objetivos de 44 px
+- [ ] D9 — Títulos por ruta, favicon, logo reemplazable
+- [ ] D10 — Checklist final + Lighthouse (anotar puntajes)
+
+### Codex (`tareas/CODEX-DISENO.md`)
+
+- [ ] P1 — Marca en el PDF (color, logo opcional)
+- [ ] P2 — Área emisora en el PDF
+- [ ] P3 — Rejilla etiqueta/valor
+- [ ] P4 — Pie con folio y "Página n de N"
+- [ ] P5 — Bloque de verificación (QR 120 pt, código en Courier-Bold)
+- [ ] P6 — Saltos de página limpios
+- [ ] P7 — Pruebas y PDFs de ejemplo
+
+### Orquestador
+
+- [ ] O9 — Revisar D1–D10 y P1–P7, redesplegar `emitir-documento`, verificar en el sitio real a 360 px
+- [ ] O7 — Pruebas de aceptación completas (incluye V1 por QR desde celular y cancelación, que no se probaron)
+
 ## Pendientes del responsable (usuario)
 
+- [ ] **Urgente:** regla Rewrite en Render (`/*` → `/index.html`). Sin ella, escanear el QR da 404.
+- [ ] Enviar el logo oficial de PROESA (SVG o PNG con fondo transparente) para el sitio y el PDF.
 - [ ] Activar *Leaked password protection* en Supabase → Authentication → Policies.
 - [ ] Confirmar la zona horaria (se usa `America/Mexico_City`).
 - [ ] Definir el primer formato real para dar de alta después del piloto.
@@ -69,11 +103,11 @@ Ajustes pedidos a Codex (no bloquean el despliegue del piloto):
 
 Segunda revisión (orquestador): R1–R3 verificados en el PDF de ejemplo; 7/7 pruebas OK. **`deno check` falla** tras R4:
 
-- [ ] R6 (alta, bloquea el despliegue) — `emitir-documento/index.ts:16` y `verificar/index.ts:14`: `JSON.parse(raw)` recibe `string | undefined` (TS2345), porque la unión de `leerCuerpoLimitado` no se estrecha con la desestructuración. Usar el resultado sin desestructurar (`const leido = await leerCuerpoLimitado(request); if (leido.error !== undefined) return …; const raw = leido.texto;`) o devolver `{ ok: true, texto } | { ok: false, error }`. El orquestador corre `deno check` con Deno 2.1.4 antes de desplegar.
+- [x] R6 (verificado por el orquestador 2026-10-28: `deno check` OK, `leerCuerpoLimitado` devuelve `{ ok, ... }`; desplegado) — `emitir-documento/index.ts:16` y `verificar/index.ts:14`: `JSON.parse(raw)` recibe `string | undefined` (TS2345), porque la unión de `leerCuerpoLimitado` no se estrecha con la desestructuración. Usar el resultado sin desestructurar (`const leido = await leerCuerpoLimitado(request); if (leido.error !== undefined) return …; const raw = leido.texto;`) o devolver `{ ok: true, texto } | { ok: false, error }`. El orquestador corre `deno check` con Deno 2.1.4 antes de desplegar.
 
 Lo verifica el orquestador al desplegar:
 
-- [ ] R5 — Comprobar que un `X-Forwarded-For` enviado por el cliente **no** cambia el `ip_hash` (si lo cambia, el límite por IP se puede saltar).
+- [x] R5 — Verificado 2026-10-28: tres consultas (sin XFF, XFF=1.1.1.1, XFF=2.2.2.2) quedan con el mismo `ip_hash`; el gateway de Supabase reescribe la cabecera, el límite por IP no se puede saltar.
 
 ### Frontend (Antigravity) — 2026-10-28
 
