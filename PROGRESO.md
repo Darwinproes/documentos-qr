@@ -23,7 +23,7 @@ El proyecto también tiene tablas de un prototipo anterior de tickets (`profiles
 - [x] O4 — Security Advisor: sin ERROR. WARN intencionales: `cancelar_documento` y `rol_actual` (validan rol internamente) — 2026-10-28
 - [x] O5 — Edge Functions `verificar` (sin JWT) y `emitir-documento` (con JWT) desplegadas v1 tras R6; faltan secrets (los captura el usuario en el panel) — 2026-10-28
 - [x] O6 — Sitio Render `documentos-qr` → https://documentos-qr.onrender.com (repo Darwinproes/documentos-qr, autodeploy main); Rewrite `/*` → `/index.html` activa — 2026-10-28
-- [ ] O7 — Correr las pruebas de aceptación completas (`docs/04-pruebas-aceptacion.md`) y el script de integración
+- [x] O7 — Pruebas de aceptación completas: ver el detalle en Fase 2 → Orquestador (2026-10-28)
 - [ ] O8 — Informe final del piloto
 
 ## Codex — backend (`tareas/CODEX.md`)
