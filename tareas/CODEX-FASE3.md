@@ -2,11 +2,22 @@
 
 ## Prompt de arranque (copiar y pegar en Codex)
 
-> Fase 3. Lee `AGENTS.md`, `docs/02-contrato-api.md`, `docs/04-pruebas-aceptacion.md` y este archivo. Implementa Q1 a Q5 en una carpeta nueva `qa/` en la raíz (es tuya; no toques `web/` ni `supabase/migrations/`). Marca cada tarea en `PROGRESO.md` → *Fase 3 — Codex*.
+> Fase 3. Lee `AGENTS.md`, `docs/02-contrato-api.md`, `docs/04-pruebas-aceptacion.md` y este archivo. Implementa **primero I1–I5 (identidad visual del PDF)** dentro de `supabase/functions/` y `supabase/tests/`, y después Q1 a Q5 en una carpeta nueva `qa/` en la raíz (es tuya; no toques `web/` ni `supabase/migrations/`). Marca cada tarea en `PROGRESO.md` → *Fase 3 — Codex*.
 
 Objetivo: que cualquier persona pueda volver a correr, con un comando, la QA de punta a punta que hizo el orquestador el 2026-10-28, sin cuentas reales y sin tocar los datos de Supabase.
 
-## Tareas
+## Primero: identidad visual del PDF (I1–I5) — antes de Q1–Q5
+
+El usuario eligió para el sistema la identidad **«Papel de seguridad»** en lo que ven terceros. El PDF es lo primero que ve un tercero, así que adopta esa identidad, la misma de la página pública. Reglas y tokens: `design-system/documentos-qr-proesa/pages/decisiones-proyecto.md` → *Identidad elegida*. Maqueta: `design-system/documentos-qr-proesa/maquetas/direcciones-visuales.html`, dirección **B**. Solo `supabase/functions/` y `supabase/tests/`.
+
+- **I1 — Tinta y color.** El azul `#0F2D52` pasa a tinta `#1F2A44`; las etiquetas, a `#56606B`; las líneas de trama, a `#9DB3A8`. Verde de sello `#17663A` en el bloque de verificación.
+- **I2 — Trama de seguridad.** Dibujar con líneas vectoriales finas (0.3–0.5 pt, `#9DB3A8`) una banda de guilloche en el encabezado y un marco de guilloche alrededor del bloque de verificación. Calcular las curvas (epitrocoides) en el propio `pdf.ts`; sin imágenes. Nunca detrás del QR ni de texto: el QR conserva su zona blanca intacta.
+- **I3 — Sello junto al QR.** Anillo circular con el texto diminuto «PROESA ELECTRÓNICA · REGISTRO CENTRAL DE DOCUMENTOS ·» siguiendo el círculo (cada carácter rotado), del mismo estilo que el sello de la página pública, al lado del QR y no encima.
+- **I4 — Línea de microtexto.** Sobre el pie de cada página, una línea continua de microtexto de 3–3.5 pt que repita «PROESA ELECTRÓNICA REGISTRO CENTRAL {folio}». Es un elemento de seguridad real: se vuelve una línea gris al fotocopiar.
+- **I5 — Serifa en títulos (opcional si el peso lo permite).** Incrustar Spectral 700 (subconjunto) con `@pdf-lib/fontkit` (versión fija) para el título del tipo de documento y el folio del encabezado; el resto sigue en Helvetica. Si el PDF crece más de 120 KB, descartar I5 y anotarlo.
+- **Pruebas.** Actualizar `pdf.test.ts` y regenerar `ejemplo.pdf` y `ejemplo-largo.pdf`. El orquestador revisa visualmente y además **escanea el QR impreso** antes de desplegar, para confirmar que la trama no afecta la lectura.
+
+## Tareas de QA automatizada
 
 - **Q1 — Supabase simulado (`qa/mock-supabase.mjs`).** Servidor Node sin dependencias en `localhost:54399` que responda lo que usa el frontend:
   - `POST /auth/v1/token?grant_type=password`, `GET /auth/v1/user`, `POST /auth/v1/logout`.

@@ -1,5 +1,55 @@
 # Decisiones de diseño del proyecto (complementan y, donde choquen, mandan sobre MASTER.md)
 
+## Identidad elegida (2026-10-28): «Papel de seguridad» en lo público + «Trazabilidad» en el panel
+
+**Esta sección manda sobre todo lo demás de este archivo y sobre MASTER.md.** Maquetas de referencia: `design-system/documentos-qr-proesa/maquetas/direcciones-visuales.html` (direcciones B y A). Origen: el usuario rechazó el diseño anterior por genérico y eligió la mezcla B + A.
+
+**Idea.** La página pública se siente como un **certificado o un billete**: sello que se imprime, trama de seguridad (guilloche), renglones con puntos guía y sellos de goma para los estados negativos. El panel interno se siente como una **herramienta de una planta de electrónica**: verde de máscara de soldadura, líneas de cobre, estados como LED encendido y números de serie en monoespaciada. Lo que une a las dos caras: la tinta, los verdes y rojos de estado y la letra del texto corrido.
+
+### Tokens
+
+| Token | Valor | Dónde |
+|---|---|---|
+| `--tinta` | `#1F2A44` | Texto principal en todo el sistema |
+| `--tinta-tenue` | `#56606B` | Etiquetas y texto secundario (≥ 4.5:1 sobre ambos fondos) |
+| `--papel` | `#EEF2EF` | Fondo de la página pública |
+| `--trama` | `#9DB3A8` | Solo líneas de guilloche y puntos guía; nunca texto |
+| `--serigrafia` | `#F7F9F6` | Fondo del panel |
+| `--mascara` | `#0F3D33` | Barra lateral y superior del panel, botón principal del panel |
+| `--cobre` | `#9A5B1F` | Líneas bajo encabezados de tabla, pista de la navegación activa, enlaces del panel; nunca fondo de texto |
+| `--sello-verde` | `#17663A` | Válido / vigente (texto, sello, LED) |
+| `--sello-rojo` | `#A3201A` | Cancelado y acciones destructivas |
+| `--ocre` | `#8A5A00` | Vencido / por vencer |
+| `--superficie` | `#FFFFFF` | Tarjetas y tablas del panel |
+
+El azul `#0F2D52` y el acento `#0369A1` anteriores **se retiran**. Solo modo claro, como ya estaba decidido.
+
+### Tipografía (todas auto-hospedadas con `@fontsource`, versiones fijas)
+
+| Familia | Rol |
+|---|---|
+| **Spectral** 600/700 | Solo lo público: veredicto («Documento válido»), sello, folio en el resultado, título de `/verificar` |
+| **Atkinson Hyperlegible** 400/700 | Texto corrido y formularios en todo el sistema (se conserva por legibilidad) |
+| **Familjen Grotesk** 500/700 | Solo el panel: títulos de sección, navegación, botones, encabezados de tabla |
+| **IBM Plex Mono** 400/600 | Solo el panel: folio, código y huellas, que son números de serie |
+
+Las fuentes del panel se cargan con las rutas `/panel/*` (carga diferida) para no pesarle a la página pública.
+
+### Reglas de la cara pública (B)
+- El veredicto es un **sello circular** con texto diminuto alrededor («PROESA ELECTRÓNICA · REGISTRO CENTRAL DE DOCUMENTOS · …») y el símbolo del estado al centro. Se dibuja **una sola vez** al cargar (≤ 1.2 s); con `prefers-reduced-motion` aparece completo. Es el único elemento animado de la página.
+- Detrás del sello, una trama de guilloche dibujada en `<canvas>` con `--trama` a baja opacidad. Decorativa: `aria-hidden`, nunca detrás de texto que haya que leer.
+- Datos como **renglones con puntos guía** (etiqueta ……… valor), no tarjetas. Folio en Spectral con números tabulares.
+- Vencido, cancelado y no registrado llevan además un **sello de goma** inclinado («VENCIDO», «CANCELADO», «SIN REGISTRO») sobre el área del veredicto, que nunca tapa datos. El texto del estado siempre está escrito; el sello no es la única señal.
+- Etiquetas en tipo oración, sin mayúsculas sostenidas, salvo el texto del sello y de la goma, que imitan impresión de seguridad.
+
+### Reglas del panel (A)
+- Barra lateral (≥ 1024 px) y barra superior (< 1024 px) en `--mascara`, con texto `#EAF2EE`. El elemento activo se marca con una pista de cobre de 3 px a la izquierda.
+- Encabezados de tabla con una línea de 2 px en `--cobre` debajo. Filas sobre `--superficie`.
+- Estado = **LED**: un punto de 9 px del color del estado con halo suave + el texto del estado. Nunca solo el punto.
+- Folio, código y huellas en IBM Plex Mono 600 color `--mascara`.
+- Indicadores de F3 como LED grandes con número (Familjen Grotesk 700) y texto.
+- Botón principal: fondo `--mascara`; secundario: borde `--mascara`; destructivo: `--sello-rojo`.
+
 Fecha: 2026-10-28 · Dueño: orquestador
 
 ## Principio

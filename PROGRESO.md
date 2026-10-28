@@ -105,8 +105,17 @@ Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright
 - [x] O10 — Migración `panel_resumen_bitacora`: `rpc('resumen_documentos')` y `rpc('bitacora_documento')` aplicadas y probadas (consulta sí, anónimo no); contrato actualizado — 2026-10-28
 - [ ] O11 — Revisar F1–F14 y Q1–Q5, volver a correr la QA completa, probar en el sitio real VENCIDO y CANCELADO con el documento de QA y publicar
 
+**Identidad elegida por el usuario (2026-10-28): «Papel de seguridad» en lo público + «Trazabilidad» en el panel.** El diseño anterior se rechazó por genérico. Tokens y reglas: `decisiones-proyecto.md` → *Identidad elegida*. Maqueta: `design-system/documentos-qr-proesa/maquetas/direcciones-visuales.html` (también en https://claude.ai/artifact/PZzcYEwDz65vMgAECpZ8gT).
+
 ### Antigravity (`tareas/ANTIGRAVITY-FASE3.md`)
 
+- [ ] F0a — Tokens nuevos y fuentes (Spectral, Familjen Grotesk, IBM Plex Mono) auto-hospedadas
+- [ ] F0b — Componente `SelloVeredicto` (sello con microtexto que se imprime una vez)
+- [ ] F0c — Componente `TramaSeguridad` (guilloche en canvas)
+- [ ] F0d — Resultado público como certificado: renglones con puntos guía y sellos de goma (cubre F6 y F7)
+- [ ] F0e — `/verificar` y login con la nueva piel
+- [ ] F0f — Panel con piel técnica: máscara, cobre, LED, Plex Mono
+- [ ] F0g — Capturas contra la maqueta y contraste AA
 - [ ] F1 — Navegación del panel en móvil/tableta (barra superior + panel lateral)
 - [ ] F2 — Tabla de documentos compacta (folio en una línea, fila enlazable)
 - [ ] F3 — Indicadores Vigentes / Por vencer / Vencidos / Cancelados
@@ -124,6 +133,11 @@ Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright
 
 ### Codex (`tareas/CODEX-FASE3.md`)
 
+- [ ] I1 — PDF con tinta y verdes de la nueva identidad
+- [ ] I2 — Trama de guilloche vectorial en el encabezado y alrededor del bloque de verificación
+- [ ] I3 — Sello con microtexto junto al QR
+- [ ] I4 — Línea de microtexto de seguridad sobre el pie
+- [ ] I5 — Spectral en títulos (opcional, ≤ 120 KB)
 - [ ] Q1 — Supabase simulado en `qa/`
 - [ ] Q2 — Pruebas de interfaz pública y del panel
 - [ ] Q3 — Auditoría automática por pantalla y reporte
