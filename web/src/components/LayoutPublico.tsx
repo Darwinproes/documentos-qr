@@ -41,6 +41,9 @@ export function LayoutPublico({ children }: LayoutPublicoProps) {
             <a href={`mailto:${CONTACTO_REPORTE}`} className="footer-link">
               Contacto: {CONTACTO_REPORTE}
             </a>
+            <a href="/certificado-proesa.cer" className="footer-link" download>
+              Certificado de firma digital
+            </a>
             <Link to="/panel/login" className="footer-link">
               Acceso interno
             </Link>

@@ -3,6 +3,7 @@ import { corsHeaders, responderOptions } from "../_shared/cors.ts";
 import { generarCodigo, generarToken, formatearCodigo } from "../_shared/aleatorio.ts";
 import { sha256Hex } from "../_shared/hash.ts";
 import { generarPdf } from "../_shared/pdf.ts";
+import { cargarCredencialFirma } from "../_shared/firma.ts";
 import { desdeErrorPostgres, respuestaError } from "../_shared/errores.ts";
 import { fechaValida, objeto, leerCuerpoLimitado } from "../_shared/validacion.ts";
 
@@ -57,7 +58,7 @@ Deno.serve(async (request) => {
       destinatario: String(record.destinatario), areaEmisora, campos, datos: (record.datos ?? {}) as Record<string, string>,
       emitidoEn: String(record.emitido_en), vigenteHasta: record.vigente_hasta ? String(record.vigente_hasta) : null,
       urlVerificacion, codigo, dominioOficial: baseUrl.host,
-    });
+    }, cargarCredencialFirma());
     const pdfSha = await sha256Hex(pdf);
     const { error: uploadError } = await service.storage.from("documentos").upload(path, new Blob([pdf], { type: "application/pdf" }), { contentType: "application/pdf", upsert: false });
     if (uploadError) throw uploadError;

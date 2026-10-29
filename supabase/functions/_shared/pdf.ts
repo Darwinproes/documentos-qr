@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import QRCode from "npm:qrcode@1.5.4";
 import { fechaValida } from "./validacion.ts";
+import { agregarEspacioFirma, firmarPdf, type CredencialFirma } from "./firma.ts";
 
 export interface DatosPdf {
   orgNombre: string;
@@ -177,7 +178,7 @@ export function textoPiePagina(folio: string, pagina: number, total: number, dom
   return `Folio ${folio} · Página ${pagina} de ${total} · Verificable en ${dominio}`;
 }
 
-export async function generarPdf(data: DatosPdf): Promise<Uint8Array> {
+export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | null = null): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -306,6 +307,9 @@ export async function generarPdf(data: DatosPdf): Promise<Uint8Array> {
     [`Código: ${data.codigo}`, courierBold, 12],
     [`Este documento solo es válido si la verificación se hace en ${data.dominioOficial}.`, regular, 8.5],
   ];
+  if (credencial) {
+    verificationLines.push(["Firmado digitalmente por PROESA. Adobe Acrobat Reader avisa si el archivo se modificó.", bold, 7.5]);
+  }
   for (const [value, font, size] of verificationLines) {
     for (const row of wrap(value, font, size, textWidth)) {
       page.drawText(row, { x: textX, y: textY, size, font, color: TEXTO });
@@ -340,5 +344,7 @@ export async function generarPdf(data: DatosPdf): Promise<Uint8Array> {
     });
   });
 
-  return await pdf.save();
+  if (!credencial) return await pdf.save();
+  agregarEspacioFirma(pdf, data.orgNombre, data.dominioOficial);
+  return await firmarPdf(await pdf.save({ useObjectStreams: false }), credencial);
 }

@@ -146,6 +146,22 @@ Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright
 
 Ejecución local: hecha por el orquestador el 2026-10-29 (ver *Revisión del orquestador → Fase 3*).
 
+## Firma digital del PDF — orquestador (2026-10-29)
+
+Origen: el usuario detectó que un PDF editado conserva su QR legítimo y la verificación por QR dice «válido»; solo la verificación por archivo lo detectaba. El QR apunta al registro, no comprueba el contenido; la firma cierra el hueco del documento digital.
+
+- [x] S1 — Certificado propio con OpenSSL 3.5.7 (RSA 3072, SHA-256, vence 2028-10-28), sin acentos en el nombre: node-forge daña el UTF-8 del certificado y la firma dejaba de asociarse con él (lo detectó pyHanko). Archivos y contraseña en `C:\Users\USUARIO\certificado-proesa` (fuera del repo, permisos solo del usuario y SYSTEM, con LEEME).
+- [x] S2 — `_shared/firma.ts` con `@signpdf` 3.3.0 (MIT) + node-forge: PAdES `adbe.pkcs7.detached`. `generarPdf(datos, credencial)` agrega el espacio de firma, firma y añade el renglón «Firmado digitalmente por PROESA…» en el bloque de verificación. La huella registrada es la del PDF firmado.
+- [x] S3 — Sin `FIRMA_P12_BASE64` el PDF sale sin firma; con el secreto y una falla, la emisión responde error (nunca un documento sin firmar en silencio).
+- [x] S4 — Pruebas: 10/10 en `deno test` (firma válida, un byte cambiado se detecta, sin credencial no firma, contraseña equivocada falla; certificado desechable creado en cada corrida). pyHanko con el certificado real: original íntegro y confiable; editado como Acrobat → modificaciones no permitidas; reescrito → firma rota. QR legible en 12/12 condiciones. PDF firmado de 61 KB.
+- [x] S5 — `emitir-documento` v8 desplegada (`verify_jwt` true, import map `deno.json`); arranca bien (responde su propio 401 sin sesión).
+- [x] S6 — `web/public/certificado-proesa.cer` y enlace «Certificado de firma digital» en el pie público. QA del panel 12/12 y auditoría limpia.
+- [x] S7 — Documentado en `docs/03-seguridad.md` y en el documento compartido (sección «Firma digital del PDF», costo y estado del piloto).
+- [ ] S8 — **Usuario:** guardar en Supabase → Edge Functions → Secrets `FIRMA_P12_BASE64` (contenido de `FIRMA_P12_BASE64.txt`) y `FIRMA_P12_CLAVE` (contenido de `CONTRASENA-P12.txt`). El orquestador no pudo hacerlo: la herramienta de secretos está bloqueada para el agente.
+- [ ] S9 — Emitir un documento real después de S8 y abrirlo en Adobe Reader (original y editado).
+
+Dependencias indirectas: Deno resuelve `node-forge` 1.4.2 y `@signpdf/utils` 3.4.0 (publicadas días antes); quedan fijas en `deno.lock` con su hash.
+
 ## Pendientes del responsable (usuario)
 
 - [x] Regla Rewrite en Render (`/*` → `/index.html`) — 2026-10-28; V1 confirmado: QR escaneado desde iPhone → `valido` para CONST-2026-000001.

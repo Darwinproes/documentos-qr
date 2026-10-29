@@ -1,6 +1,9 @@
 {
   "version": "4",
   "specifiers": {
+    "npm:@signpdf/placeholder-pdf-lib@3.3.0": "3.3.0_pdf-lib@1.17.1",
+    "npm:@signpdf/signer-p12@3.3.0": "3.3.0_node-forge@1.4.2",
+    "npm:@signpdf/signpdf@3.3.0": "3.3.0",
     "npm:@supabase/supabase-js@2.49.4": "2.49.4",
     "npm:pdf-lib@1.17.1": "1.17.1",
     "npm:qrcode@1.5.4": "1.5.4"
@@ -17,6 +20,29 @@
       "dependencies": [
         "pako"
       ]
+    },
+    "@signpdf/placeholder-pdf-lib@3.3.0_pdf-lib@1.17.1": {
+      "integrity": "sha512-DT1s617z88NvvCmo+z8jaz7lNzy7b7/fwo/movJGukpfSkl4FaLNRXIHNBCTRCP9TUb6F/axK1JulES/jY7mLQ==",
+      "dependencies": [
+        "@signpdf/utils",
+        "pdf-lib"
+      ]
+    },
+    "@signpdf/signer-p12@3.3.0_node-forge@1.4.2": {
+      "integrity": "sha512-MLynYKgUBu29ojIueIDV34sIOFDFpP0s1gQORxCc0zhs1jfy0juqU2xQpjUayMbhzB4L0zS9dPwgHtok1f89Cg==",
+      "dependencies": [
+        "@signpdf/utils",
+        "node-forge"
+      ]
+    },
+    "@signpdf/signpdf@3.3.0": {
+      "integrity": "sha512-/vy3dPTsTbLHdsKRarPQw8++UqN8GXxjEVnl4ZRl+o/zMWFqVb861RM5bxoRMGGMuPSvb1Rgt2lmVobEc0YUpw==",
+      "dependencies": [
+        "@signpdf/utils"
+      ]
+    },
+    "@signpdf/utils@3.4.0": {
+      "integrity": "sha512-8Ayesb0qwk9FrrlotPPaGvNKkIwMeTz4WB43kVu20zA/wcPn2s7J0ZSPqsx+ltVYDglL1wYHQFobgrKDccp3kw=="
     },
     "@supabase/auth-js@2.69.1": {
       "integrity": "sha512-FILtt5WjCNzmReeRLq5wRs3iShwmnWgBvxHfqapC/VoljJl+W8hDAyFmf1NVw3zH+ZjZ05AKxiKxVeb0HNWRMQ==",
@@ -139,6 +165,9 @@
       "dependencies": [
         "p-locate"
       ]
+    },
+    "node-forge@1.4.2": {
+      "integrity": "sha512-rRtAR5XLJ8gCKd9du4qrKAsgCG1ObGP4gLeNJMa4vYSeq4bmBMOJk5IHkrviBV0q7uoAJlVd8HEQYQSVUb4FGQ=="
     },
     "p-limit@2.3.0": {
       "integrity": "sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==",
@@ -266,7 +295,12 @@
   },
   "workspace": {
     "dependencies": [
+      "npm:@signpdf/placeholder-pdf-lib@3.3.0",
+      "npm:@signpdf/signer-p12@3.3.0",
+      "npm:@signpdf/signpdf@3.3.0",
+      "npm:@signpdf/utils@3.3.0",
       "npm:@supabase/supabase-js@2.49.4",
+      "npm:node-forge@1.4.0",
       "npm:pdf-lib@1.17.1",
       "npm:qrcode@1.5.4"
     ]
