@@ -1,9 +1,5 @@
 import React from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import '@fontsource/familjen-grotesk/500.css';
-import '@fontsource/familjen-grotesk/700.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/600.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { DocumentosListaPage } from './pages/DocumentosListaPage';

@@ -1,8 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LayoutPanel } from '../components/LayoutPanel';
 import { emitirDocumento } from '../lib/api';
-import { formatearFecha, hoyLocalIso, sumarDiasIso } from '../lib/formato';
+import {
+  abreviarEnlaceVerificacion,
+  abreviarSha256,
+  formatearFecha,
+  formatearValorCampo,
+  hoyLocalIso,
+  sumarDiasIso
+} from '../lib/formato';
 import { supabase } from '../lib/supabase';
 import {
   DefinicionCampo,
@@ -38,8 +45,13 @@ export function EmitirDocumentoPage() {
   const [paso, setPaso] = useState<PasoEmision>(1);
   const [emitiendo, setEmitiendo] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [erroresCampo, setErroresCampo] = useState<Record<string, string>>({});
   const [resultado, setResultado] = useState<RespuestaEmitirDocumento | null>(null);
-  const [copiadoCampo, setCopiadoCampo] = useState<'folio' | 'codigo' | 'enlace' | null>(null);
+  const [copiadoCampo, setCopiadoCampo] = useState<'folio' | 'codigo' | 'enlace' | 'sha256' | null>(
+    null
+  );
+
+  const resumenErroresRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function cargarTiposActivos() {
@@ -66,6 +78,7 @@ export function EmitirDocumentoPage() {
     setTipoClave(nuevaClave);
     setDatos({});
     setError(null);
+    setErroresCampo({});
   };
 
   const manejarCambioCampo = (clave: string, valor: string) => {
@@ -73,11 +86,20 @@ export function EmitirDocumentoPage() {
       ...prev,
       [clave]: valor
     }));
+    const idInput = `campo-${clave}`;
+    if (erroresCampo[idInput]) {
+      setErroresCampo((prev) => {
+        const copia = { ...prev };
+        delete copia[idInput];
+        return copia;
+      });
+    }
   };
 
   const avanzarADatos = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setErroresCampo({});
     if (!tipoActual) {
       setError('Seleccione un tipo de documento activo.');
       return;
@@ -87,6 +109,7 @@ export function EmitirDocumentoPage() {
 
   const validarDatosCaptura = (): boolean => {
     setError(null);
+    const nuevosErrores: Record<string, string> = {};
 
     if (!tipoActual) {
       setError('Seleccione un tipo de documento activo.');
@@ -95,36 +118,37 @@ export function EmitirDocumentoPage() {
 
     const destLimpio = destinatario.trim();
     if (!destLimpio) {
-      setError('El destinatario es obligatorio.');
-      return false;
-    }
-    if (destLimpio.length > 200) {
-      setError('El destinatario no puede exceder los 200 caracteres.');
-      return false;
+      nuevosErrores['input-destinatario'] = 'El destinatario es obligatorio.';
+    } else if (destLimpio.length > 200) {
+      nuevosErrores['input-destinatario'] = 'El destinatario no puede exceder los 200 caracteres.';
     }
 
     const camposDefinidos: DefinicionCampo[] = tipoActual.campos || [];
     for (const campo of camposDefinidos) {
+      const idCampo = `campo-${campo.clave}`;
       const val = (datos[campo.clave] ?? '').trim();
       if (campo.requerido && !val) {
-        setError(`Falta el campo requerido: ${campo.etiqueta}`);
-        return false;
-      }
-      if (val.length > 2000) {
-        setError(`El campo "${campo.etiqueta}" excede el máximo de 2000 caracteres.`);
-        return false;
+        nuevosErrores[idCampo] = `Falta el campo requerido: ${campo.etiqueta}.`;
+      } else if (val.length > 2000) {
+        nuevosErrores[idCampo] = `El campo «${campo.etiqueta}» excede el máximo de 2000 caracteres.`;
       }
     }
 
     if (modoVigencia === 'fecha_especifica') {
       if (!fechaEspecifica) {
-        setError('Seleccione la fecha específica de vigencia.');
-        return false;
+        nuevosErrores['input-vigencia-fecha'] = 'Seleccione la fecha específica de vigencia.';
+      } else if (fechaEspecifica < hoyLocalIso()) {
+        nuevosErrores['input-vigencia-fecha'] = 'La vigencia no puede ser anterior a hoy.';
       }
-      if (fechaEspecifica < hoyLocalIso()) {
-        setError('La vigencia no puede ser anterior a hoy.');
-        return false;
-      }
+    }
+
+    setErroresCampo(nuevosErrores);
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setTimeout(() => {
+        resumenErroresRef.current?.focus();
+      }, 0);
+      return false;
     }
 
     return true;
@@ -176,7 +200,10 @@ export function EmitirDocumentoPage() {
     }
   };
 
-  const copiarValor = async (tipo: 'folio' | 'codigo' | 'enlace', texto: string) => {
+  const copiarValor = async (
+    tipo: 'folio' | 'codigo' | 'enlace' | 'sha256',
+    texto: string
+  ) => {
     try {
       await navigator.clipboard.writeText(texto);
       setCopiadoCampo(tipo);
@@ -193,6 +220,7 @@ export function EmitirDocumentoPage() {
     setFechaEspecifica('');
     setResultado(null);
     setError(null);
+    setErroresCampo({});
     setPaso(1);
   };
 
@@ -201,10 +229,12 @@ export function EmitirDocumentoPage() {
     if (modoVigencia === 'fecha_especifica') return formatearFecha(fechaEspecifica);
     if (tipoActual?.vigencia_dias) {
       const estimada = sumarDiasIso(tipoActual.vigencia_dias);
-      return `Según el tipo (${tipoActual.vigencia_dias} días — aprox. ${formatearFecha(estimada)})`;
+      return `Según el tipo (${tipoActual.vigencia_dias} días — ${formatearFecha(estimada)})`;
     }
     return 'Según el tipo (Sin vencimiento)';
   };
+
+  const listaErroresPaso2 = Object.entries(erroresCampo).map(([id, texto]) => ({ id, texto }));
 
   return (
     <LayoutPanel rolesPermitidos={['emisor', 'admin']}>
@@ -212,12 +242,12 @@ export function EmitirDocumentoPage() {
         <div>
           <h1 className="panel-page-title">Emitir documento oficial</h1>
           <p className="panel-page-subtitle">
-            Genera un nuevo folio, código de verificación y archivo PDF con código QR.
+            Genere un nuevo folio, código de verificación y archivo PDF con código QR.
           </p>
         </div>
       </div>
 
-      {/* Indicador de pasos D7: 1 Tipo → 2 Datos → 3 Confirmar → 4 Listo */}
+      {/* Indicador de pasos: 1 Tipo → 2 Datos → 3 Confirmar → 4 Listo */}
       <nav className="stepper-nav" aria-label="Progreso de emisión">
         <ol className="stepper-list">
           {PASOS_DEFINICION.map((item) => {
@@ -247,7 +277,6 @@ export function EmitirDocumentoPage() {
 
       {cargandoTipos ? (
         <div className="card state-card" role="status">
-          <div className="spinner" aria-hidden="true" />
           <p className="state-text">Cargando catálogo de tipos de documento…</p>
         </div>
       ) : tipos.length === 0 ? (
@@ -305,6 +334,32 @@ export function EmitirDocumentoPage() {
         </section>
       ) : paso === 2 && tipoActual ? (
         <section className="card form-card">
+          {listaErroresPaso2.length > 0 && (
+            <div
+              ref={resumenErroresRef}
+              className="alert alert-error error-summary"
+              role="alert"
+              tabIndex={-1}
+            >
+              <p className="error-summary-title">Revise los siguientes campos obligatorios:</p>
+              <ul className="error-summary-list">
+                {listaErroresPaso2.map((item) => (
+                  <li key={item.id}>
+                    <a
+                      href={`#${item.id}`}
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        document.getElementById(item.id)?.focus();
+                      }}
+                    >
+                      {item.texto}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <form onSubmit={pasarAConfirmacion} className="form-stack" noValidate>
             <div className="form-group">
               <label htmlFor="input-destinatario" className="form-label">
@@ -313,13 +368,42 @@ export function EmitirDocumentoPage() {
               <input
                 id="input-destinatario"
                 type="text"
-                className="form-input"
+                className={`form-input ${
+                  erroresCampo['input-destinatario'] ? 'form-input-invalid' : ''
+                }`}
                 placeholder="Ej. Juan Pérez López"
                 maxLength={200}
                 value={destinatario}
-                onChange={(e) => setDestinatario(e.target.value)}
+                aria-invalid={Boolean(erroresCampo['input-destinatario'])}
+                aria-describedby={
+                  erroresCampo['input-destinatario']
+                    ? 'hint-destinatario error-input-destinatario'
+                    : 'hint-destinatario'
+                }
+                onChange={(e) => {
+                  setDestinatario(e.target.value);
+                  if (erroresCampo['input-destinatario']) {
+                    setErroresCampo((prev) => {
+                      const copia = { ...prev };
+                      delete copia['input-destinatario'];
+                      return copia;
+                    });
+                  }
+                }}
                 required
               />
+              <span id="hint-destinatario" className="form-hint">
+                Aparece en el encabezado de verificación y en el PDF.
+              </span>
+              {erroresCampo['input-destinatario'] && (
+                <span
+                  id="error-input-destinatario"
+                  className="field-error-text"
+                  role="alert"
+                >
+                  {erroresCampo['input-destinatario']}
+                </span>
+              )}
             </div>
 
             {tipoActual.campos && tipoActual.campos.length > 0 && (
@@ -328,7 +412,9 @@ export function EmitirDocumentoPage() {
                 <div className="form-stack">
                   {tipoActual.campos.map((campo) => {
                     const idInput = `campo-${campo.clave}`;
+                    const idError = `error-${idInput}`;
                     const valorActual = datos[campo.clave] ?? '';
+                    const msgError = erroresCampo[idInput];
 
                     return (
                       <div key={campo.clave} className="form-group">
@@ -342,9 +428,12 @@ export function EmitirDocumentoPage() {
                         {campo.tipo === 'texto_largo' ? (
                           <textarea
                             id={idInput}
-                            className="form-textarea"
+                            className={`form-textarea ${msgError ? 'form-input-invalid' : ''}`}
                             rows={3}
+                            placeholder={`Ej. ${campo.etiqueta}`}
                             value={valorActual}
+                            aria-invalid={Boolean(msgError)}
+                            aria-describedby={msgError ? idError : undefined}
                             onChange={(e) => manejarCambioCampo(campo.clave, e.target.value)}
                             required={campo.requerido}
                             maxLength={2000}
@@ -359,12 +448,26 @@ export function EmitirDocumentoPage() {
                                   ? 'number'
                                   : 'text'
                             }
-                            className="form-input"
+                            className={`form-input ${msgError ? 'form-input-invalid' : ''}`}
+                            placeholder={
+                              campo.tipo === 'texto'
+                                ? `Ej. ${campo.etiqueta}`
+                                : campo.tipo === 'numero'
+                                  ? 'Ej. 8'
+                                  : undefined
+                            }
                             value={valorActual}
+                            aria-invalid={Boolean(msgError)}
+                            aria-describedby={msgError ? idError : undefined}
                             onChange={(e) => manejarCambioCampo(campo.clave, e.target.value)}
                             required={campo.requerido}
                             maxLength={2000}
                           />
+                        )}
+                        {msgError && (
+                          <span id={idError} className="field-error-text" role="alert">
+                            {msgError}
+                          </span>
                         )}
                       </div>
                     );
@@ -381,7 +484,16 @@ export function EmitirDocumentoPage() {
                     type="radio"
                     name="modo-vigencia"
                     checked={modoVigencia === 'segun_tipo'}
-                    onChange={() => setModoVigencia('segun_tipo')}
+                    onChange={() => {
+                      setModoVigencia('segun_tipo');
+                      if (erroresCampo['input-vigencia-fecha']) {
+                        setErroresCampo((prev) => {
+                          const copia = { ...prev };
+                          delete copia['input-vigencia-fecha'];
+                          return copia;
+                        });
+                      }
+                    }}
                   />
                   <span>
                     Según el tipo (
@@ -403,19 +515,45 @@ export function EmitirDocumentoPage() {
                 </label>
 
                 {modoVigencia === 'fecha_especifica' && (
-                  <div className="nested-date-input">
+                  <div className="nested-date-input form-group">
                     <label htmlFor="input-vigencia-fecha" className="form-label">
                       Vigente hasta *
                     </label>
                     <input
                       id="input-vigencia-fecha"
                       type="date"
-                      className="form-input"
+                      className={`form-input ${
+                        erroresCampo['input-vigencia-fecha'] ? 'form-input-invalid' : ''
+                      }`}
                       min={hoyLocalIso()}
                       value={fechaEspecifica}
-                      onChange={(e) => setFechaEspecifica(e.target.value)}
+                      aria-invalid={Boolean(erroresCampo['input-vigencia-fecha'])}
+                      aria-describedby={
+                        erroresCampo['input-vigencia-fecha']
+                          ? 'error-vigencia-fecha'
+                          : undefined
+                      }
+                      onChange={(e) => {
+                        setFechaEspecifica(e.target.value);
+                        if (erroresCampo['input-vigencia-fecha']) {
+                          setErroresCampo((prev) => {
+                            const copia = { ...prev };
+                            delete copia['input-vigencia-fecha'];
+                            return copia;
+                          });
+                        }
+                      }}
                       required
                     />
+                    {erroresCampo['input-vigencia-fecha'] && (
+                      <span
+                        id="error-vigencia-fecha"
+                        className="field-error-text"
+                        role="alert"
+                      >
+                        {erroresCampo['input-vigencia-fecha']}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -424,7 +562,16 @@ export function EmitirDocumentoPage() {
                     type="radio"
                     name="modo-vigencia"
                     checked={modoVigencia === 'sin_vencimiento'}
-                    onChange={() => setModoVigencia('sin_vencimiento')}
+                    onChange={() => {
+                      setModoVigencia('sin_vencimiento');
+                      if (erroresCampo['input-vigencia-fecha']) {
+                        setErroresCampo((prev) => {
+                          const copia = { ...prev };
+                          delete copia['input-vigencia-fecha'];
+                          return copia;
+                        });
+                      }
+                    }}
                   />
                   <span>Sin vencimiento</span>
                 </label>
@@ -437,6 +584,7 @@ export function EmitirDocumentoPage() {
                 className="btn btn-secondary"
                 onClick={() => {
                   setError(null);
+                  setErroresCampo({});
                   setPaso(1);
                 }}
               >
@@ -456,38 +604,34 @@ export function EmitirDocumentoPage() {
             oficial y se generará el PDF definitivo.
           </p>
 
-          <dl className="details-grid mt-section">
-            <div className="details-item">
-              <dt>Tipo de documento</dt>
-              <dd>
+          <dl className="renglones-panel-grid mt-section">
+            <div className="renglon-panel-fila">
+              <dt className="renglon-panel-dt">Tipo de documento</dt>
+              <dd className="renglon-panel-dd">
                 {tipoActual.clave} — {tipoActual.nombre}
               </dd>
             </div>
-            <div className="details-item">
-              <dt>Vigencia seleccionada</dt>
-              <dd>{resumenVigenciaTexto()}</dd>
+            <div className="renglon-panel-fila">
+              <dt className="renglon-panel-dt">Vigencia seleccionada</dt>
+              <dd className="renglon-panel-dd">{resumenVigenciaTexto()}</dd>
             </div>
-            <div className="details-item details-item-wide">
-              <dt>Destinatario</dt>
-              <dd className="destinatario-highlight">{destinatario.trim()}</dd>
+            <div className="renglon-panel-fila renglon-panel-wide">
+              <dt className="renglon-panel-dt">Destinatario</dt>
+              <dd className="renglon-panel-dd">{destinatario.trim()}</dd>
             </div>
           </dl>
 
           {tipoActual.campos && tipoActual.campos.length > 0 && (
-            <div className="custom-fields-section">
-              <h3 className="details-subtitle">Campos del documento</h3>
-              <dl className="details-grid">
+            <div className="mt-section">
+              <h3 className="subsection-title">Campos del documento</h3>
+              <dl className="renglones-panel-grid">
                 {tipoActual.campos.map((campo) => {
-                  const val = (datos[campo.clave] ?? '').trim();
+                  const val = formatearValorCampo(datos[campo.clave], campo.tipo);
                   return (
-                    <div key={campo.clave} className="details-item">
-                      <dt>{campo.etiqueta}</dt>
-                      <dd>
-                        {val
-                          ? campo.tipo === 'fecha'
-                            ? formatearFecha(val)
-                            : val
-                          : '— (vacío)'}
+                    <div key={campo.clave} className="renglon-panel-fila">
+                      <dt className="renglon-panel-dt">{campo.etiqueta}</dt>
+                      <dd className="renglon-panel-dd">
+                        {val !== null ? val : <span className="text-muted">No capturado</span>}
                       </dd>
                     </div>
                   );
@@ -549,11 +693,11 @@ export function EmitirDocumentoPage() {
             documento.
           </div>
 
-          {/* Feedback accesible para botones Copiar */}
           <div className="sr-only" aria-live="polite">
             {copiadoCampo ? 'Copiado al portapapeles' : ''}
           </div>
 
+          {/* G5: Folio y código sin partir */}
           <div className="credentials-highlight-grid mt-section">
             <div className="credential-card">
               <span className="credential-label">Folio asignado</span>
@@ -586,26 +730,61 @@ export function EmitirDocumentoPage() {
             </div>
           </div>
 
-          <dl className="details-grid mt-section">
-            <div className="details-item">
-              <dt>Vigencia</dt>
-              <dd>
+          {/* G5: Huella y enlace abreviados con botones Copiar */}
+          <dl className="renglones-panel-grid mt-section">
+            <div className="renglon-panel-fila">
+              <dt className="renglon-panel-dt">Vigencia</dt>
+              <dd className="renglon-panel-dd">
                 {resultado.vigente_hasta
                   ? formatearFecha(resultado.vigente_hasta)
                   : 'Sin vencimiento'}
               </dd>
             </div>
-            <div className="details-item">
-              <dt>SHA-256 del PDF</dt>
-              <dd className="mono-text text-small break-all">{resultado.pdf_sha256}</dd>
+            <div className="renglon-panel-fila">
+              <dt className="renglon-panel-dt">Huella digital PDF (SHA-256)</dt>
+              <dd className="renglon-panel-dd sha-inline-row">
+                <code className="mono-text" title={resultado.pdf_sha256}>
+                  {abreviarSha256(resultado.pdf_sha256)}
+                </code>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  aria-label="Copiar huella digital SHA-256"
+                  onClick={() => copiarValor('sha256', resultado.pdf_sha256)}
+                >
+                  {copiadoCampo === 'sha256' ? 'Copiado' : 'Copiar huella'}
+                </button>
+              </dd>
             </div>
-            <div className="details-item details-item-wide">
-              <dt>Enlace directo de verificación (QR)</dt>
-              <dd className="mono-text break-all">{resultado.url_verificacion}</dd>
+            <div className="renglon-panel-fila renglon-panel-wide">
+              <dt className="renglon-panel-dt">Enlace de verificación (QR)</dt>
+              <dd className="renglon-panel-dd sha-inline-row">
+                <code className="mono-text nowrap-code" title={resultado.url_verificacion}>
+                  {abreviarEnlaceVerificacion(resultado.url_verificacion)}
+                </code>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => copiarValor('enlace', resultado.url_verificacion)}
+                >
+                  {copiadoCampo === 'enlace' ? 'Copiado' : 'Copiar enlace'}
+                </button>
+              </dd>
             </div>
           </dl>
 
           <div className="emission-actions-bar">
+            <Link
+              to={`/panel/documentos/${resultado.documento_id}`}
+              className="btn btn-secondary"
+            >
+              Ver detalle del documento
+            </Link>
+
+            <button type="button" className="btn btn-secondary" onClick={reiniciarFormulario}>
+              Emitir otro documento
+            </button>
+
             <a
               href={resultado.pdf_url}
               target="_blank"
@@ -615,25 +794,6 @@ export function EmitirDocumentoPage() {
             >
               Descargar PDF
             </a>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => copiarValor('enlace', resultado.url_verificacion)}
-            >
-              {copiadoCampo === 'enlace' ? 'Copiado' : 'Copiar enlace'}
-            </button>
-
-            <Link
-              to={`/panel/documentos/${resultado.documento_id}`}
-              className="btn btn-outline"
-            >
-              Ver detalle del documento
-            </Link>
-
-            <button type="button" className="btn btn-outline" onClick={reiniciarFormulario}>
-              Emitir otro documento
-            </button>
           </div>
         </section>
       ) : null}

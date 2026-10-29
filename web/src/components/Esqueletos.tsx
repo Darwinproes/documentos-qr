@@ -1,27 +1,22 @@
 export function EsqueletoResultado() {
   return (
     <section
-      className="verification-result-card skeleton-card"
+      className="resultado-institucional"
       aria-busy="true"
       aria-live="polite"
       aria-label="Consultando registro oficial de documentos"
     >
-      <div className="skeleton-banner">
-        <div className="skeleton-circle" />
-        <div className="skeleton-stack">
-          <div className="skeleton-line skeleton-line-lg" />
-          <div className="skeleton-line skeleton-line-md" />
+      <div className="veredicto-encabezado">
+        <div className="skeleton skeleton-circle" />
+        <div className="veredicto-textos">
+          <div className="skeleton skeleton-title" />
+          <div className="skeleton skeleton-subtitle" />
         </div>
       </div>
-      <div className="document-details-box">
-        <div className="skeleton-line skeleton-line-title" />
-        <div className="details-grid">
-          <div className="skeleton-box" />
-          <div className="skeleton-box" />
-          <div className="skeleton-box details-item-wide" />
-          <div className="skeleton-box" />
-          <div className="skeleton-box" />
-        </div>
+      <div>
+        <div className="skeleton skeleton-row" />
+        <div className="skeleton skeleton-row" />
+        <div className="skeleton skeleton-row" />
       </div>
     </section>
   );
@@ -36,11 +31,7 @@ export function EsqueletoLista() {
       aria-label="Cargando lista de documentos"
     >
       {[1, 2, 3, 4, 5].map((fila) => (
-        <div key={fila} className="skeleton-row">
-          <div className="skeleton-line skeleton-line-sm" />
-          <div className="skeleton-line skeleton-line-md" />
-          <div className="skeleton-line skeleton-line-sm" />
-        </div>
+        <div key={fila} className="skeleton skeleton-row" />
       ))}
     </div>
   );
@@ -49,27 +40,14 @@ export function EsqueletoLista() {
 export function EsqueletoDetalle() {
   return (
     <div
-      className="detail-grid-layout"
       aria-busy="true"
       aria-live="polite"
       aria-label="Cargando detalle del documento"
     >
       <div className="card">
-        <div className="skeleton-line skeleton-line-title" />
-        <div className="details-grid">
-          <div className="skeleton-box" />
-          <div className="skeleton-box" />
-          <div className="skeleton-box details-item-wide" />
-          <div className="skeleton-box" />
-          <div className="skeleton-box" />
-        </div>
-      </div>
-      <div className="card">
-        <div className="skeleton-line skeleton-line-title" />
-        <div className="skeleton-stack">
-          <div className="skeleton-box" />
-          <div className="skeleton-box" />
-        </div>
+        <div className="skeleton skeleton-title" />
+        <div className="skeleton skeleton-row" />
+        <div className="skeleton skeleton-row" />
       </div>
     </div>
   );

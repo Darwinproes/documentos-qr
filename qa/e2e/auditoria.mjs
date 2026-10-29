@@ -49,7 +49,7 @@ try {
             : [];
         });
         const unnamed = controls.flatMap((element) => {
-          const name = element.getAttribute('aria-label') || element.getAttribute('aria-labelledby') || element.getAttribute('title') || element.innerText?.trim() || element.getAttribute('alt') || element.getAttribute('placeholder');
+          const name = element.labels?.[0]?.innerText?.trim() || element.getAttribute('aria-label') || element.getAttribute('aria-labelledby') || element.getAttribute('title') || element.innerText?.trim() || element.getAttribute('alt') || element.getAttribute('placeholder');
           return name ? [] : [{ tag: element.tagName.toLowerCase(), role: element.getAttribute('role') }];
         });
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

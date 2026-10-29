@@ -170,35 +170,35 @@ Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la
 
 **Identidad institucional elegida por el usuario (2026-10-29, dirección A):** ver `decisiones-proyecto.md` → *Identidad institucional* y las maquetas de `maquetas/identidad-institucional/`. Va antes de G1–G13.
 
-- [ ] N1 — Tokens y fuentes Source Serif 4 / Source Sans 3 / Source Code Pro
-- [ ] N2 — Emblema real de PROESA en encabezado, login y panel
-- [ ] N3 — Encabezado y pie públicos
-- [ ] N4 — Inicio `/verificar` renovado
-- [ ] N5 — Resultado público institucional («a nombre de …»), sin trama ni sellos
-- [ ] N6 — Login institucional
-- [ ] N7 — Panel con la nueva piel
-- [ ] N8 — Limpieza de tokens, fuentes y componentes retirados
-- [ ] G1 — Errores junto a cada campo y resumen que lista todos (login, emitir, tipos, modal)
-- [ ] G2 — Tipos de documento en tarjetas debajo de 768 px
-- [ ] G3 — Filtros plegados en celular (búsqueda visible + botón «Filtros»)
-- [ ] G4 — Ejemplos de campo con «Ej.» y ayuda de formato visible
-- [ ] G5 — Folio y código sin partir; huella y enlace abreviados con «Copiar» en emitir paso 4
-- [ ] G6 — Fechas en `dd/mm/aaaa` en todo el panel; «No capturado» para vacíos
-- [ ] G7 — Casillas y opciones de 18–20 px con fila clicable de 44 px; «Tipo activo» como interruptor
-- [ ] G8 — Botones de acción a todo el ancho en celular
-- [ ] G9 — Detalle en renglones etiqueta/valor; bitácora legible
-- [ ] G10 — Lista vacía con una sola acción y el término buscado
-- [ ] G11 — Usuarios compactos; «Guardar» deshabilitado con estilo claro
-- [ ] G12 — Indicador «Por vencer» sin partir en celular
-- [ ] G13 — Login sin nombre repetido; campos marcados al fallar
+- [x] N1 — Tokens y fuentes Source Serif 4 / Source Sans 3 / Source Code Pro — 2026-10-29: Tokens institucionales en `web/src/index.css` (0 hex fuera de `:root`) y `@fontsource/source-serif-4@5.3.1`, `@fontsource/source-sans-3@5.3.1` y `@fontsource/source-code-pro@5.3.1` en `main.tsx`; probar con `cd web && npm run build`.
+- [x] N2 — Emblema real de PROESA en encabezado, login y panel — 2026-10-29: Copiados `emblema-proesa.png` (120 px) y `emblema-proesa-64.png` (64 px) a `web/public/`, favicon actualizado en `index.html` y emblema aplicado en encabezado público, login y barra/cajón del panel; probar en `/verificar` y `/panel/login`.
+- [x] N3 — Encabezado y pie públicos — 2026-10-29: Banda `--marino` de 56 px con emblema, «PROESA Electrónica · Registro de documentos oficiales», botón claro «Verificar documento» y pie institucional de una fila; probar en `/verificar` y `/v/:token`.
+- [x] N4 — Inicio `/verificar` renovado — 2026-10-29: Dos columnas en escritorio (1 en móvil) con título en Source Serif, pestañas en bloque `--fondo-suave`, entradas con ejemplos `Ej.` y recuadro gris «¿Dónde están el folio y el código?» con recomendación del PDF; probar en `/verificar`.
+- [x] N5 — Resultado público institucional («a nombre de …»), sin trama ni sellos — 2026-10-29: Veredicto institucional con destinatario y vigencia en Source Serif, ícono SVG lineal por estado, renglones etiqueta/valor con líneas finas y aviso de dominio en recuadro gris; probar en `/v/:token` y `/verificar`.
+- [x] N6 — Login institucional — 2026-10-29: Tarjeta de 400 px sobre `--fondo` con emblema y nombre arriba, título «Panel interno» en Source Serif, campos de 44 px, enlace «← Ir a verificación pública» y ruta pública sin barra ni pie público; probar en `/panel/login`.
+- [x] N7 — Panel con la nueva piel — 2026-10-29: Barra lateral `--marino` de 220 px con ítem activo blanco, encabezados en Source Serif, folios/códigos/huellas en Source Code Pro y `EtiquetaEstado` con punto + texto; probar en `/panel`, `/panel/emitir`, `/panel/tipos` y `/panel/usuarios`.
+- [x] N8 — Limpieza de tokens, fuentes y componentes retirados — 2026-10-29: Eliminados `SelloVeredicto.tsx`, `TramaSeguridad.tsx`, `LedEstado.tsx`, `logo.svg`, `favicon.svg` y las 4 fuentes retiradas; probar buscando tokens/componentes retirados en archivos `.ts`/`.tsx`/`.css` de `web/src`.
+- [x] G1 — Errores junto a cada campo y resumen que lista todos (login, emitir, tipos, modal) — 2026-10-29: `role="alert"` enfocable con lista de errores y mensajes junto a cada campo con `aria-invalid` y `aria-describedby` en login, verificar, emitir, tipos y modal de cancelación; probar enviando formularios vacíos o inválidos.
+- [x] G2 — Tipos de documento en tarjetas debajo de 768 px — 2026-10-29: Tabla en `≥ 768 px` y tarjetas `.panel-mobile-card` en `< 768 px` sin desplazamiento horizontal en `/panel/tipos`; probar en `/panel/tipos` a 360 px.
+- [x] G3 — Filtros plegados en celular (búsqueda visible + botón «Filtros») — 2026-10-29: En `< 768 px` queda visible la búsqueda y el botón «Filtros» (`Filtros (N)` cuando hay activos) con `aria-expanded`; probar en `/panel` a 360 px.
+- [x] G4 — Ejemplos de campo con «Ej.» y ayuda de formato visible — 2026-10-29: Todos los `placeholder` inician con `Ej.` en `--texto-tenue` y las reglas de formato van en texto fijo debajo del campo con `aria-describedby`; probar en `/verificar`, `/panel/login`, `/panel/emitir` y `/panel/tipos`.
+- [x] G5 — Folio y código sin partir; huella y enlace abreviados con «Copiar» en emitir paso 4 — 2026-10-29: `white-space: nowrap` en folios y códigos, enlace abreviado (`dominio/v/…4chars`) y huella abreviada (`8…8`) con botones «Copiar» que copian el valor completo; probar tras emitir en `/panel/emitir`.
+- [x] G6 — Fechas en `dd/mm/aaaa` en todo el panel; «No capturado» para vacíos — 2026-10-29: `formatearValorCampo` y `formatearFechaCorta` muestran `dd/mm/aaaa` en resumen de paso 3, detalle y tablas, y «No capturado» en `--texto-tenue` para vacíos; probar en `/panel/emitir` y `/panel/documentos/:id`.
+- [x] G7 — Casillas y opciones de 18–20 px con fila clicable de 44 px; «Tipo activo» como interruptor — 2026-10-29: `.choice-row` de 44 px con `input` de 18 px en vigencia y campos obligatorios, e interruptor `role="switch"` para «Tipo activo»; probar en `/panel/emitir` y `/panel/tipos`.
+- [x] G8 — Botones de acción a todo el ancho en celular — 2026-10-29: Contenedores `.action-group-responsive` apilan botones al 100 % de ancho en `< 600 px` con acción primaria arriba; probar a 360 px en `/panel/emitir`, `/panel/documentos/:id` y `/panel/tipos`.
+- [x] G9 — Detalle en renglones etiqueta/valor; bitácora legible — 2026-10-29: Renglones `.detail-kv-row` (etiqueta 180 px en escritorio, apilados en móvil) y bitácora con evento en negrita, fecha con segundos, usuario/área y motivo en bloque `.audit-reason`; probar en `/panel/documentos/:id`.
+- [x] G10 — Lista vacía con una sola acción y el término buscado — 2026-10-29: Mensaje con los filtros activos («No hay documentos que coincidan con "…"») y un único botón secundario «Limpiar filtros»; probar buscando un término inexistente en `/panel`.
+- [x] G11 — Usuarios compactos; «Guardar» deshabilitado con estilo claro — 2026-10-29: Grid compacto de controles (180 px área, 160 px rol, interruptor y botón) y `.btn:disabled` con `--fondo-suave`, `--texto-tenue` y `--borde` sin `opacity`; probar en `/panel/usuarios`.
+- [x] G12 — Indicador «Por vencer» sin partir en celular — 2026-10-29: `.summary-metric-label` con `white-space: nowrap` en rejilla 2×2 a 360 px; probar en `/panel` a 360 px.
+- [x] G13 — Login sin nombre repetido; campos marcados al fallar — 2026-10-29: Encabezado único fuera de la tarjeta («PROESA Electrónica» + «Registro de documentos oficiales»), título «Panel interno» y ambos campos con `aria-invalid="true"` al fallar credenciales; probar en `/panel/login`.
 
 ### Codex (`tareas/CODEX-FASE4.md`)
 
-- [ ] P1 — Emblema real en el PDF (base64 en `_shared/emblema.ts`)
-- [ ] P2 — Colores institucionales y título en Times-Bold
-- [ ] P3 — Bloque de verificación sobrio
-- [ ] P4 — Sin guilloche ni sello; se queda la línea de microtexto
-- [ ] P5 — Pruebas y PDF de ejemplo regenerados
+- [x] P1 — Emblema real en el PDF (base64 en `_shared/emblema.ts`); regenerar con el comentario del archivo.
+- [x] P2 — Colores institucionales y título en Times-Bold.
+- [x] P3 — Bloque de verificación sobrio, QR limpio, URL/folio/código monoespaciados.
+- [x] P4 — Retirados guilloche y sello; se conserva la línea de microtexto.
+- [x] P5 — Pruebas y PDF de ejemplo regenerados — 2026-10-29 (orquestador, Codex no tenía Deno): `deno check` OK, 10/10 pruebas, `ejemplo.pdf` 15 KB, QR legible en 12/12 condiciones en los tres PDF, firma íntegra (pyHanko).
 - [ ] H1 — Simulado con más tipos, fechas, bitácora con motivo y nombre largo
 - [ ] H2 — Casos del panel para G1, G2, G3, G4, G7 y G10
 - [ ] H3 — Auditoría: desplazamiento interno, folios partidos, fechas ISO, controles enormes
@@ -219,6 +219,15 @@ Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la
 - [ ] Para producción: subdominio propio (ej. `verifica.proesaelectronica.com`).
 
 ## Revisión del orquestador
+
+### Fase 4 — 2026-10-29
+
+Resultado: **aprobado, pendiente de publicar** (con permiso del usuario).
+
+- **Antigravity (N1–N8, G1–G13):** sin código para pruebas (regla 10), sin restos de la identidad anterior, 0 colores fuera de `:root`, `npm run build` OK. Revisión visual con 41 capturas del panel y los 4 estados públicos a 360 y 1440 px: fiel a las maquetas institucionales. Corregido por el orquestador: en celular el encabezado público apretaba el nombre en cinco renglones (se oculta «Verificar documento» debajo de 600 px) y en emitir paso 4 el enlace se salía de su recuadro (se recorta con «…»).
+- **Codex (P1–P5):** PDF institucional con el emblema real, título en Times-Bold, bloque de verificación sobrio y microtexto; 15 KB. P5 lo corrió el orquestador.
+- **QA:** `npm run qa:panel` 12/12; auditoría de 8 pantallas × 3 anchos sin problemas. El orquestador ajustó dos pruebas desactualizadas: el título del login («Panel interno») y la auditoría, que no contaba la etiqueta `<label>` como nombre accesible.
+- **Pendiente de Codex: H1–H5** (pruebas nuevas de G1–G13 y `qa:estados`). La columna «Atkinson» de la auditoría ya no aplica: pasa a «Source Sans 3» en H3.
 
 ### Fase 3 — 2026-10-29
 
@@ -275,3 +284,5 @@ Nota: Render **no** lee `public/_redirects` (es formato de Netlify). La reescrit
 ## Preguntas al orquestador
 
 _(Los agentes escriben aquí: fecha, agente, pregunta, qué opción eligieron mientras tanto.)_
+
+- **2026-10-29 — Antigravity:** En `N6` y `G13` se indicó que el encabezado de `/panel/login` sea `«Panel interno»`. En `qa/e2e/panel.mjs:160` la prueba actual todavía busca `getByRole('heading', { name: /panel interno de documentos/i })`; se respetó el texto `«Panel interno»` pedido en `N6`/`G13` (regla 10: no alterar el producto por una prueba) para que se actualice el selector dentro de `H2` en `qa/`.

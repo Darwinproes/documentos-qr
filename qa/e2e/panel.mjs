@@ -157,7 +157,7 @@ test('usuario inactivo no entra al panel', async (browser) => {
 test('cerrar sesión regresa al login', async (browser) => {
   const page = await adminPage(browser);
   await page.getByRole('button', { name: /cerrar sesión/i }).click();
-  await page.getByRole('heading', { name: /panel interno de documentos/i }).waitFor();
+  await page.getByRole('heading', { name: /^panel interno/i }).waitFor();
 });
 
 const browser = await openBrowser();

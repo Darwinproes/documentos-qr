@@ -15,12 +15,12 @@ export function LayoutPublico({ children }: LayoutPublicoProps) {
 
       <header className="public-header">
         <div className="container public-header-inner">
-          <Link
-            to="/verificar"
-            className="brand-link"
-            aria-label={`${ORG_NOMBRE} — Ir a verificación de documentos`}
-          >
-            <img src="/logo.svg" alt={ORG_NOMBRE} className="brand-logo" />
+          <Link to="/verificar" className="brand-link">
+            <img src="/emblema-proesa.png" alt="" className="brand-emblema" />
+            <span className="brand-texts">
+              <span className="brand-title">{ORG_NOMBRE}</span>
+              <span className="brand-subtitle">Registro de documentos oficiales</span>
+            </span>
           </Link>
           <nav aria-label="Navegación pública" className="public-nav">
             <Link to="/verificar" className="nav-link-public">
@@ -37,17 +37,15 @@ export function LayoutPublico({ children }: LayoutPublicoProps) {
       <footer className="public-footer">
         <div className="container public-footer-inner">
           <span className="footer-copy">© {ORG_NOMBRE}</span>
-          <div className="footer-links">
-            <a href={`mailto:${CONTACTO_REPORTE}`} className="footer-link">
-              Contacto: {CONTACTO_REPORTE}
-            </a>
-            <a href="/certificado-proesa.cer" className="footer-link" download>
-              Certificado de firma digital
-            </a>
-            <Link to="/panel/login" className="footer-link">
-              Acceso interno
-            </Link>
-          </div>
+          <a href="/certificado-proesa.cer" className="footer-link" download>
+            Certificado de firma digital
+          </a>
+          <a href={`mailto:${CONTACTO_REPORTE}`} className="footer-link">
+            Contacto
+          </a>
+          <Link to="/panel/login" className="footer-link">
+            Acceso interno
+          </Link>
         </div>
       </footer>
     </div>

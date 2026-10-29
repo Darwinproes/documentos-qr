@@ -94,11 +94,12 @@ Deno.test("sin credencial el PDF sale sin firma y con contraseña incorrecta la 
   assert(fallo, "Con la contraseña equivocada no debe generarse un PDF");
 });
 
-Deno.test("genera un PDF con metadatos, área emisora, acentos y sin logo", async () => {
+Deno.test("genera un PDF institucional con emblema, metadatos, área emisora y acentos", async () => {
   const bytes = await generarPdf(fixture());
   const loaded = await PDFDocument.load(bytes);
   assert(loaded.getTitle() === "CONST-2026-000001");
   assert(loaded.getPageCount() === 1);
+  assert(bytes.byteLength < 120 * 1024, `El PDF de una página excede 120 KB: ${bytes.byteLength}`);
   await Deno.mkdir("supabase/tests/salida", { recursive: true });
   await Deno.writeFile("supabase/tests/salida/ejemplo.pdf", bytes);
 });

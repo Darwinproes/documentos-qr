@@ -3,6 +3,7 @@ import { EstadoDocumento, EstadoVisualDocumento } from './tipos';
 const REGEX_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const REGEX_FOLIO = /^[A-Za-z0-9]{2,10}-\d{4}-\d{6}$/;
 const REGEX_SHA256 = /^[0-9a-f]{64}$/i;
+const REGEX_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 export const PATRON_FOLIO = REGEX_FOLIO;
 export const PATRON_CODIGO_LIMPIO = /^[0-9A-HJ-NP-TV-Z]{10}$/;
@@ -50,13 +51,37 @@ export function validarFormatoSha256(hash: string): boolean {
 }
 
 /**
- * Abrevia una huella SHA-256 como 5fec…f38b (F5).
+ * Abrevia una huella SHA-256 como a048…2c2d (F5, G5).
  */
 export function abreviarSha256(hash: string | null | undefined): string {
-  if (!hash) return '—';
+  if (!hash) return 'No capturado';
   const limpio = hash.trim();
   if (limpio.length <= 12) return limpio;
   return `${limpio.slice(0, 4)}…${limpio.slice(-4)}`;
+}
+
+/**
+ * Abrevia un enlace de verificación como dominio/v/…4chars (G5).
+ */
+export function abreviarEnlaceVerificacion(url: string | null | undefined): string {
+  if (!url) return 'No capturado';
+  const limpio = url.trim();
+  try {
+    const parsed = new URL(limpio);
+    const partes = parsed.pathname.split('/').filter(Boolean);
+    const token = partes[partes.length - 1] || '';
+    const sufijo = token.length > 4 ? token.slice(-4) : token;
+    return `${parsed.host}/v/…${sufijo}`;
+  } catch {
+    const idx = limpio.indexOf('/v/');
+    if (idx !== -1) {
+      const dominio = limpio.slice(0, idx).replace(/^https?:\/\//, '');
+      const token = limpio.slice(idx + 3);
+      const sufijo = token.length > 4 ? token.slice(-4) : token;
+      return `${dominio}/v/…${sufijo}`;
+    }
+    return limpio;
+  }
 }
 
 /**
@@ -80,10 +105,27 @@ export function formatearFecha(iso: string | null | undefined): string {
 export const formatearFechaCorta = formatearFecha;
 
 /**
+ * Formatea un valor de campo dinámico: si es fecha ISO la convierte a dd/mm/aaaa;
+ * si está vacío devuelve null para que la vista muestre «No capturado» (G6).
+ */
+export function formatearValorCampo(
+  valor: unknown,
+  tipoCampo?: string
+): string | null {
+  if (valor === null || valor === undefined) return null;
+  const texto = String(valor).trim();
+  if (!texto) return null;
+  if (tipoCampo === 'fecha' || REGEX_FECHA_ISO.test(texto)) {
+    return formatearFecha(texto);
+  }
+  return texto;
+}
+
+/**
  * Formatea un timestamp ISO como dd/mm/aaaa hh:mm en hora de México.
  */
 export function formatearFechaHora(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return 'No capturado';
   const fecha = new Date(iso);
   if (Number.isNaN(fecha.getTime())) return iso;
   try {

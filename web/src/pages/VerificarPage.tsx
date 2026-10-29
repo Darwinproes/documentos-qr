@@ -6,7 +6,7 @@ import {
   ResultadoVerificacionVista
 } from '../components/ResultadoVerificacionVista';
 import { calcularSha256Archivo, ErrorClienteVerificacion, verificarDocumento } from '../lib/api';
-import { ORG_NOMBRE } from '../lib/config';
+import { DOMINIO_OFICIAL, ORG_NOMBRE } from '../lib/config';
 import {
   formatearTamanoBytes,
   limpiarCodigoVerificacion,
@@ -50,6 +50,7 @@ export function VerificarPage() {
   const inputArchivoRef = useRef<HTMLInputElement>(null);
   const tabManualRef = useRef<HTMLButtonElement>(null);
   const tabArchivoRef = useRef<HTMLButtonElement>(null);
+  const resumenErroresRef = useRef<HTMLDivElement>(null);
 
   const cambiarPestana = (nueva: PestanaActiva) => {
     setPestana(nueva);
@@ -120,12 +121,16 @@ export function VerificarPage() {
     const errorCodigo = validarCodigo(codigo);
     setErroresCampo({ folio: errorFolio, codigo: errorCodigo });
 
-    if (errorFolio) {
-      inputFolioRef.current?.focus();
-      return;
-    }
-    if (errorCodigo) {
-      inputCodigoRef.current?.focus();
+    if (errorFolio || errorCodigo) {
+      setTimeout(() => {
+        if (resumenErroresRef.current) {
+          resumenErroresRef.current.focus();
+        } else if (errorFolio) {
+          inputFolioRef.current?.focus();
+        } else {
+          inputCodigoRef.current?.focus();
+        }
+      }, 0);
       return;
     }
 
@@ -240,23 +245,30 @@ export function VerificarPage() {
     setErrorGeneral(null);
   };
 
+  const listaErroresManual: { idCampo: string; mensaje: string }[] = [];
+  if (erroresCampo.folio) {
+    listaErroresManual.push({ idCampo: 'input-folio', mensaje: erroresCampo.folio });
+  }
+  if (erroresCampo.codigo) {
+    listaErroresManual.push({ idCampo: 'input-codigo', mensaje: erroresCampo.codigo });
+  }
+
   return (
     <LayoutPublico>
       <div className="page-narrow">
         <div className="page-intro">
           <h1 className="page-title">Verificación de documentos oficiales</h1>
           <p className="page-lead">
-            Compruebe la autenticidad y vigencia de cualquier documento emitido por{' '}
-            <strong>{ORG_NOMBRE}</strong> ingresando su folio y código o validando el archivo PDF
-            original.
+            Compruebe si un documento fue emitido por {ORG_NOMBRE}, si sigue vigente y a nombre de
+            quién está.
           </p>
         </div>
 
         <div className="verificar-grid">
-          <div className="card tabs-card">
+          <div className="verificar-form-col">
             <div
               role="tablist"
-              aria-label="Método de verificación"
+              aria-label="Forma de verificar"
               className="tabs-header"
               onKeyDown={manejarTecladoTabs}
             >
@@ -295,6 +307,32 @@ export function VerificarPage() {
                 aria-labelledby="tab-manual"
                 className="tab-panel"
               >
+                {listaErroresManual.length > 0 && (
+                  <div
+                    ref={resumenErroresRef}
+                    className="alert alert-error error-summary"
+                    role="alert"
+                    tabIndex={-1}
+                  >
+                    <p className="error-summary-title">Revise los siguientes campos:</p>
+                    <ul className="error-summary-list">
+                      {listaErroresManual.map((item) => (
+                        <li key={item.idCampo}>
+                          <a
+                            href={`#${item.idCampo}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              document.getElementById(item.idCampo)?.focus();
+                            }}
+                          >
+                            {item.mensaje}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <form onSubmit={manejarSubmitManual} noValidate className="form-stack">
                   <div className="form-group">
                     <label htmlFor="input-folio" className="form-label">
@@ -309,7 +347,7 @@ export function VerificarPage() {
                       autoComplete="off"
                       spellCheck={false}
                       className={`form-input mono-text ${erroresCampo.folio ? 'form-input-invalid' : ''}`}
-                      placeholder="CONST-2026-000001"
+                      placeholder="Ej. CONST-2026-000001"
                       value={folio}
                       aria-invalid={Boolean(erroresCampo.folio)}
                       aria-describedby={erroresCampo.folio ? 'hint-folio error-folio' : 'hint-folio'}
@@ -324,7 +362,7 @@ export function VerificarPage() {
                       required
                     />
                     <span id="hint-folio" className="form-hint">
-                      Formato: PREFIJO-AAAA-NNNNNN
+                      Formato PREFIJO-AÑO-NÚMERO.
                     </span>
                     {erroresCampo.folio && (
                       <span id="error-folio" className="field-error-text" role="alert">
@@ -346,7 +384,7 @@ export function VerificarPage() {
                       autoComplete="off"
                       spellCheck={false}
                       className={`form-input mono-text ${erroresCampo.codigo ? 'form-input-invalid' : ''}`}
-                      placeholder="7KQ2M-XA9PD"
+                      placeholder="Ej. 7KQ2M-XA9PD"
                       maxLength={13}
                       value={codigo}
                       aria-invalid={Boolean(erroresCampo.codigo)}
@@ -373,8 +411,7 @@ export function VerificarPage() {
                       required
                     />
                     <span id="hint-codigo" className="form-hint">
-                      10 caracteres impresos debajo del código QR (inserta el guion
-                      automáticamente).
+                      10 caracteres, impresos junto al código QR. El guion se agrega solo.
                     </span>
                     {erroresCampo.codigo && (
                       <span id="error-codigo" className="field-error-text" role="alert">
@@ -383,9 +420,17 @@ export function VerificarPage() {
                     )}
                   </div>
 
-                  <button type="submit" className="btn btn-primary btn-block" disabled={cargando}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-submit-verificar"
+                    disabled={cargando}
+                  >
                     {cargando ? 'Consultando…' : 'Verificar documento'}
                   </button>
+
+                  <p className="dominio-pie-form">
+                    Solo es oficial en <strong className="nowrap-domain">{DOMINIO_OFICIAL}</strong>
+                  </p>
                 </form>
               </div>
             )}
@@ -481,7 +526,7 @@ export function VerificarPage() {
             )}
 
             {errorGeneral && (
-              <div className="alert alert-error mx-panel" role="alert" aria-live="assertive">
+              <div className="alert alert-error mt-md" role="alert" aria-live="assertive">
                 {errorGeneral}
               </div>
             )}

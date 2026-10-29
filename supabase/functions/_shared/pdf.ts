@@ -1,7 +1,8 @@
-import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import QRCode from "npm:qrcode@1.5.4";
 import { fechaValida } from "./validacion.ts";
 import { agregarEspacioFirma, firmarPdf, type CredencialFirma } from "./firma.ts";
+import { EMBLEMA_PNG_BASE64 } from "./emblema.ts";
 
 export interface DatosPdf {
   orgNombre: string;
@@ -18,12 +19,10 @@ export interface DatosPdf {
   dominioOficial: string;
 }
 
-const TINTA = rgb(31 / 255, 42 / 255, 68 / 255);
-const TEXTO = TINTA;
-const TINTA_TENUE = rgb(86 / 255, 96 / 255, 107 / 255);
-const TRAMA = rgb(157 / 255, 179 / 255, 168 / 255);
-const SELLO_VERDE = rgb(23 / 255, 102 / 255, 58 / 255);
-const BORDE = rgb(157 / 255, 179 / 255, 168 / 255);
+const TINTA = rgb(9 / 255, 30 / 255, 62 / 255);
+const TEXTO = rgb(31 / 255, 41 / 255, 51 / 255);
+const TINTA_TENUE = rgb(82 / 255, 96 / 255, 109 / 255);
+const MICRO = rgb(154 / 255, 165 / 255, 177 / 255);
 
 function seguro(text: string): string {
   return text.replace(/[^\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?");
@@ -66,14 +65,12 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
   return lines.length ? lines : [""];
 }
 
-function drawHeader(page: PDFPage, orgNombre: string, folio: string, bold: PDFFont) {
+function drawHeader(page: PDFPage, folio: string, bold: PDFFont, regular: PDFFont, logo: Awaited<ReturnType<PDFDocument["embedPng"]>>) {
   const margin = 56;
   const folioLabel = `Folio: ${seguro(folio)}`;
-  let orgY = 752;
-  for (const row of wrap(orgNombre, bold, 9, 310)) {
-    page.drawText(row, { x: margin, y: orgY, size: 9, font: bold, color: TINTA });
-    orgY -= 12;
-  }
+  page.drawImage(logo, { x: margin, y: 744, width: 23, height: 36 });
+  page.drawText("PROESA Electrónica", { x: margin + 31, y: 762, size: 11, font: bold, color: TINTA });
+  page.drawText("Registro de documentos oficiales", { x: margin + 31, y: 748, size: 8, font: regular, color: TINTA_TENUE });
   page.drawText(folioLabel, {
     x: 612 - margin - bold.widthOfTextAtSize(folioLabel, 9),
     y: 752,
@@ -81,97 +78,13 @@ function drawHeader(page: PDFPage, orgNombre: string, folio: string, bold: PDFFo
     font: bold,
     color: TINTA,
   });
-  page.drawLine({ start: { x: margin, y: 740 }, end: { x: 612 - margin, y: 740 }, thickness: 1, color: TINTA });
-  drawGuillocheBand(page, margin, 731, 612 - 2 * margin, 5, false, TRAMA);
-}
-
-function drawGuillocheMotif(page: PDFPage, x: number, y: number, length: number, thickness: number, vertical: boolean, color = TRAMA) {
-  const points: { x: number; y: number }[] = [];
-  const steps = 32;
-  const R = 3, r = 1, d = 2.7;
-  for (let i = 0; i <= steps; i++) {
-    const t = 2 * Math.PI * i / steps;
-    points.push({
-      x: (R + r) * Math.cos(t) - d * Math.cos((R / r + 1) * t),
-      y: (R + r) * Math.sin(t) - d * Math.sin((R / r + 1) * t),
-    });
-  }
-  const minX = Math.min(...points.map((p) => p.x)), maxX = Math.max(...points.map((p) => p.x));
-  const minY = Math.min(...points.map((p) => p.y)), maxY = Math.max(...points.map((p) => p.y));
-  const map = (point: { x: number; y: number }) => vertical
-    ? { x: x + (point.y - minY) / (maxY - minY) * thickness, y: y + (point.x - minX) / (maxX - minX) * length }
-    : { x: x + (point.x - minX) / (maxX - minX) * length, y: y + (point.y - minY) / (maxY - minY) * thickness };
-  for (let i = 1; i < points.length; i++) {
-    const start = map(points[i - 1]), end = map(points[i]);
-    page.drawLine({ start, end, thickness: 0.35, color });
-  }
-}
-
-function drawGuillocheBand(page: PDFPage, x: number, y: number, length: number, thickness: number, vertical: boolean, color = TRAMA) {
-  const motifLength = 16;
-  const count = Math.max(1, Math.floor(length / motifLength));
-  const cellLength = length / count;
-  for (let i = 0; i < count; i++) {
-    if (vertical) drawGuillocheMotif(page, x, y + i * cellLength, cellLength, thickness, true, color);
-    else drawGuillocheMotif(page, x + i * cellLength, y, cellLength, thickness, false, color);
-  }
-}
-
-function drawGuillocheFrame(page: PDFPage, x: number, y: number, width: number, height: number) {
-  const inset = 3;
-  const thickness = 2.5;
-  drawGuillocheBand(page, x + 7, y + height - inset - thickness, width - 14, thickness, false);
-  drawGuillocheBand(page, x + 7, y + inset, width - 14, thickness, false);
-  drawGuillocheBand(page, x + inset, y + 7, height - 14, thickness, true);
-  drawGuillocheBand(page, x + width - inset - thickness, y + 7, height - 14, thickness, true);
-}
-
-function drawSeal(page: PDFPage, cx: number, cy: number, regular: PDFFont, bold: PDFFont) {
-  const radius = 24;
-  const innerRadius = 17.5;
-  page.drawCircle({ x: cx, y: cy, size: radius, borderColor: SELLO_VERDE, borderWidth: 0.7 });
-  page.drawCircle({ x: cx, y: cy, size: innerRadius, borderColor: SELLO_VERDE, borderWidth: 0.35 });
-  // Inscripción en sentido horario desde arriba, con la parte alta de las letras hacia fuera.
-  // Cada carácter ocupa un arco proporcional a su ancho; el sobrante se reparte como espaciado.
-  const inscription = "PROESA ELECTRÓNICA · REGISTRO CENTRAL DE DOCUMENTOS · ";
-  const chars = Array.from(inscription);
-  const baseline = innerRadius + 2;
-  const circumference = 2 * Math.PI * baseline;
-  const naturalWidth = (s: number) => chars.reduce((sum, c) => sum + regular.widthOfTextAtSize(c, s), 0);
-  const size = Math.min(3.3, 3.3 * circumference * 0.92 / naturalWidth(3.3));
-  const spacing = (circumference - naturalWidth(size)) / chars.length;
-  let arc = 0;
-  chars.forEach((character) => {
-    const charWidth = regular.widthOfTextAtSize(character, size);
-    const angle = Math.PI / 2 - (arc + charWidth / 2) / baseline;
-    arc += charWidth + spacing;
-    const rotation = angle - Math.PI / 2;
-    page.drawText(character, {
-      x: cx + baseline * Math.cos(angle) - (charWidth / 2) * Math.cos(rotation),
-      y: cy + baseline * Math.sin(angle) - (charWidth / 2) * Math.sin(rotation),
-      size,
-      font: regular,
-      color: SELLO_VERDE,
-      rotate: degrees(rotation * 180 / Math.PI),
-    });
-  });
-  const center = "PROESA";
-  page.drawText(center, {
-    x: cx - bold.widthOfTextAtSize(center, 5) / 2,
-    y: cy - 2,
-    size: 5,
-    font: bold,
-    color: SELLO_VERDE,
-  });
+  page.drawLine({ start: { x: margin, y: 738 }, end: { x: 612 - margin, y: 738 }, thickness: 0.75, color: TINTA });
+  page.drawLine({ start: { x: margin, y: 735 }, end: { x: 612 - margin, y: 735 }, thickness: 0.75, color: TINTA });
 }
 
 async function cargarLogo(pdf: PDFDocument) {
-  try {
-    const bytes = await Deno.readFile(new URL("./assets/logo.png", import.meta.url));
-    return await pdf.embedPng(bytes);
-  } catch {
-    return null;
-  }
+  const binary = atob(EMBLEMA_PNG_BASE64);
+  return await pdf.embedPng(Uint8Array.from(binary, (character) => character.charCodeAt(0)));
 }
 
 export function textoPiePagina(folio: string, pagina: number, total: number, dominio: string): string {
@@ -182,6 +95,7 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const titleFont = await pdf.embedFont(StandardFonts.TimesRomanBold);
   const courierBold = await pdf.embedFont(StandardFonts.CourierBold);
   pdf.setTitle(data.folio);
   pdf.setAuthor(data.orgNombre);
@@ -202,23 +116,14 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
 
   const nextPage = () => {
     page = pdf.addPage([612, 792]);
-    drawHeader(page, data.orgNombre, data.folio, bold);
+    drawHeader(page, data.folio, bold, regular, logo);
     y = 718;
   };
 
   const logo = await cargarLogo(pdf);
-  if (logo) {
-    const height = 28;
-    const width = Math.min(220, height * logo.width / logo.height);
-    page.drawImage(logo, { x: margin, y: 748, width, height });
-  } else {
-    const orgLines = wrap(data.orgNombre, bold, 14, 330);
-    let orgY = 750;
-    for (const row of orgLines) {
-      page.drawText(row, { x: margin, y: orgY, size: 14, font: bold, color: TINTA });
-      orgY -= 18;
-    }
-  }
+  page.drawImage(logo, { x: margin, y: 741, width: 30, height: 47 });
+  page.drawText("PROESA Electrónica", { x: margin + 39, y: 767, size: 14, font: bold, color: TINTA });
+  page.drawText("Registro de documentos oficiales", { x: margin + 39, y: 750, size: 9, font: regular, color: TINTA_TENUE });
   const folioHeader = `Folio: ${seguro(data.folio)}`;
   page.drawText(folioHeader, {
     x: 612 - margin - bold.widthOfTextAtSize(folioHeader, 10),
@@ -227,17 +132,17 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
     font: bold,
     color: TINTA,
   });
-  page.drawLine({ start: { x: margin, y: 736 }, end: { x: 612 - margin, y: 736 }, thickness: 1.5, color: TINTA });
-  drawGuillocheBand(page, margin, 728, contentWidth, 5, false, TRAMA);
+  page.drawLine({ start: { x: margin, y: 737 }, end: { x: 612 - margin, y: 737 }, thickness: 0.75, color: TINTA });
+  page.drawLine({ start: { x: margin, y: 734 }, end: { x: 612 - margin, y: 734 }, thickness: 0.75, color: TINTA });
 
   page.drawText("Tipo de documento", { x: margin, y: 710, size: 9, font: bold, color: TINTA_TENUE });
   let titleY = 684;
-  for (const row of wrap(data.tipoNombre, bold, 18, contentWidth)) {
+  for (const row of wrap(data.tipoNombre, titleFont, 18, contentWidth)) {
     page.drawText(row, {
-      x: margin + (contentWidth - bold.widthOfTextAtSize(row, 18)) / 2,
+      x: margin + (contentWidth - titleFont.widthOfTextAtSize(row, 18)) / 2,
       y: titleY,
       size: 18,
-      font: bold,
+      font: titleFont,
       color: TINTA,
     });
     titleY -= 22;
@@ -276,9 +181,8 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
   const blockY = 44;
   const blockHeight = 190;
   if (y < blockY + blockHeight + 20) nextPage();
-  page.drawRectangle({ x: margin, y: blockY, width: contentWidth, height: blockHeight, borderWidth: 1, borderColor: BORDE });
-  drawGuillocheFrame(page, margin, blockY, contentWidth, blockHeight);
-  page.drawText("VERIFICACIÓN DE AUTENTICIDAD", { x: margin + 12, y: blockY + blockHeight - 18, size: 9, font: bold, color: SELLO_VERDE });
+  page.drawRectangle({ x: margin, y: blockY, width: contentWidth, height: blockHeight, borderWidth: 1, borderColor: TINTA });
+  page.drawText("Verificación de autenticidad", { x: margin + 12, y: blockY + blockHeight - 24, size: 13, font: titleFont, color: TINTA });
 
   const qx = margin + 12;
   const qy = blockY + 24;
@@ -295,16 +199,14 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
     }
   }
 
-  const sealCenterX = qx + qrSize + 27;
-  drawSeal(page, sealCenterX, qy + qrSize / 2, regular, bold);
-  const textX = qx + qrSize + 56;
-  const textWidth = contentWidth - qrSize - 68;
+  const textX = qx + qrSize + 16;
+  const textWidth = contentWidth - qrSize - 40;
   let textY = blockY + blockHeight - 38;
   const verificationLines: [string, PDFFont, number][] = [
-    ["Verifique la autenticidad escaneando el código QR o entrando a:", regular, 8.5],
-    [`${data.dominioOficial}/verificar`, regular, 8.5],
-    [`Folio: ${data.folio}`, bold, 10],
-    [`Código: ${data.codigo}`, courierBold, 12],
+    ["Verifique escaneando el código QR o entrando a:", regular, 8.5],
+    [`${data.dominioOficial}/verificar`, courierBold, 8.5],
+    [`Folio: ${data.folio}`, courierBold, 9],
+    [`Código: ${data.codigo}`, courierBold, 11],
     [`Este documento solo es válido si la verificación se hace en ${data.dominioOficial}.`, regular, 8.5],
   ];
   if (credencial) {
@@ -333,7 +235,7 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
       y: 31,
       size: 3.25,
       font: regular,
-      color: TRAMA,
+      color: MICRO,
     });
     pdfPage.drawText(footer, {
       x: (612 - regular.widthOfTextAtSize(footer, size)) / 2,

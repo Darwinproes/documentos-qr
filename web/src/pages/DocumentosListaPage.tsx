@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { EstadoIndicador, EtiquetaEstado } from '../components/EtiquetaEstado';
 import { LayoutPanel } from '../components/LayoutPanel';
-import { EstadoVisualLed, LedEstado } from '../components/LedEstado';
 import { useAuth } from '../context/AuthContext';
 import {
   esFechaVencida,
@@ -19,7 +19,7 @@ const TAMANO_PAGINA = 25;
 
 type FiltroEstado = '' | 'vigente' | 'por_vencer' | 'vencido' | 'cancelado' | 'pendiente';
 
-function resolverEstadoLed(doc: DocumentoPanel): EstadoVisualLed {
+function resolverEstadoIndicador(doc: DocumentoPanel): EstadoIndicador {
   if (doc.estado === 'cancelado') return 'cancelado';
   if (doc.estado === 'pendiente') return 'pendiente';
   if (doc.vigente_hasta && esFechaVencida(doc.vigente_hasta)) return 'vencido';
@@ -53,6 +53,7 @@ export function DocumentosListaPage() {
   const [filtroTipoId, setFiltroTipoId] = useState<string>('');
   const [fechaDesde, setFechaDesde] = useState<string>('');
   const [fechaHasta, setFechaHasta] = useState<string>('');
+  const [filtrosMovilAbiertos, setFiltrosMovilAbiertos] = useState<boolean>(false);
 
   const [cargando, setCargando] = useState<boolean>(true);
   const mostrarEsqueleto = useCargaDiferida(cargando, 200);
@@ -186,9 +187,11 @@ export function DocumentosListaPage() {
   };
 
   const totalPaginas = Math.max(1, Math.ceil(totalRegistros / TAMANO_PAGINA));
-  const hayFiltrosActivos = Boolean(
-    busquedaActiva || filtroEstado || filtroTipoId || fechaDesde || fechaHasta
-  );
+  const cantidadFiltrosSecundarios = [filtroEstado, filtroTipoId, fechaDesde, fechaHasta].filter(
+    Boolean
+  ).length;
+  const hayFiltrosActivos = Boolean(busquedaActiva.trim() || cantidadFiltrosSecundarios > 0);
+  const mostrarControlesSecundarios = !esMovil || filtrosMovilAbiertos;
 
   return (
     <LayoutPanel>
@@ -196,7 +199,8 @@ export function DocumentosListaPage() {
         <div>
           <h1 className="panel-page-title">Documentos emitidos</h1>
           <p className="panel-page-subtitle">
-            Consulte, filtre y verifique el estado de los documentos oficiales registrados.
+            {resumen.total} documentos · {resumen.vigentes} vigentes · {resumen.vencidos} vencidos ·{' '}
+            {resumen.cancelados} cancelados
           </p>
         </div>
         {puedeEmitir && (
@@ -206,7 +210,7 @@ export function DocumentosListaPage() {
         )}
       </div>
 
-      {/* F3: Indicadores superiores como filtros rápidos */}
+      {/* Indicadores superiores como filtros rápidos (F3, G12) */}
       <div className="indicadores-grid" role="group" aria-label="Indicadores de vigencia y cancelación">
         <button
           type="button"
@@ -215,7 +219,7 @@ export function DocumentosListaPage() {
           onClick={() => alternarIndicador('vigente')}
         >
           <div className="indicador-top">
-            <LedEstado estado="vigente" mostrarTexto={false} />
+            <EtiquetaEstado estado="vigente" mostrarTexto={false} />
             <span className="indicador-etiqueta">Vigentes</span>
           </div>
           <span className="indicador-numero">{resumen.vigentes}</span>
@@ -228,8 +232,11 @@ export function DocumentosListaPage() {
           onClick={() => alternarIndicador('por_vencer')}
         >
           <div className="indicador-top">
-            <LedEstado estado="por_vencer" mostrarTexto={false} />
-            <span className="indicador-etiqueta">Por vencer (30 días)</span>
+            <EtiquetaEstado estado="por_vencer" mostrarTexto={false} />
+            <span className="indicador-etiqueta-bloque">
+              <span className="indicador-etiqueta">Por vencer</span>
+              <span className="indicador-sub">en 30 días</span>
+            </span>
           </div>
           <span className="indicador-numero">{resumen.por_vencer}</span>
         </button>
@@ -241,7 +248,7 @@ export function DocumentosListaPage() {
           onClick={() => alternarIndicador('vencido')}
         >
           <div className="indicador-top">
-            <LedEstado estado="vencido" mostrarTexto={false} />
+            <EtiquetaEstado estado="vencido" mostrarTexto={false} />
             <span className="indicador-etiqueta">Vencidos</span>
           </div>
           <span className="indicador-numero">{resumen.vencidos}</span>
@@ -254,114 +261,137 @@ export function DocumentosListaPage() {
           onClick={() => alternarIndicador('cancelado')}
         >
           <div className="indicador-top">
-            <LedEstado estado="cancelado" mostrarTexto={false} />
+            <EtiquetaEstado estado="cancelado" mostrarTexto={false} />
             <span className="indicador-etiqueta">Cancelados</span>
           </div>
           <span className="indicador-numero">{resumen.cancelados}</span>
         </button>
       </div>
 
+      {/* G3: Búsqueda siempre visible y filtros plegables en celular (< 768px) */}
       <section className="card filters-card" aria-label="Filtros de búsqueda">
-        <form onSubmit={manejarBuscarSubmit} className="filters-grid">
-          <div className="form-group filter-search-group">
-            <label htmlFor="buscar-doc" className="form-label">
-              Buscar por folio o destinatario
-            </label>
-            <div className="search-input-row">
-              <input
-                id="buscar-doc"
-                type="search"
-                className="form-input"
-                placeholder="Ej. CONST-2026-000001 o María López"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-              />
-              <button type="submit" className="btn btn-secondary">
-                Buscar
-              </button>
+        <form onSubmit={manejarBuscarSubmit} className="filters-form">
+          <div className="filters-top-bar">
+            <div className="form-group filter-search-group">
+              <label htmlFor="buscar-doc" className="form-label">
+                Buscar por folio o destinatario
+              </label>
+              <div className="search-input-row">
+                <input
+                  id="buscar-doc"
+                  type="search"
+                  className="form-input"
+                  placeholder="Ej. CONST-2026-000001 o María López"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                />
+                <button type="submit" className="btn btn-secondary">
+                  Buscar
+                </button>
+                {esMovil && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-toggle-filters"
+                    aria-expanded={filtrosMovilAbiertos}
+                    aria-controls="panel-filtros-adicionales"
+                    onClick={() => setFiltrosMovilAbiertos((prev) => !prev)}
+                  >
+                    {cantidadFiltrosSecundarios > 0
+                      ? `Filtros · ${cantidadFiltrosSecundarios} ${
+                          cantidadFiltrosSecundarios === 1 ? 'activo' : 'activos'
+                        }`
+                      : 'Filtros'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="filtro-estado" className="form-label">
-              Estado
-            </label>
-            <select
-              id="filtro-estado"
-              className="form-select"
-              value={filtroEstado}
-              onChange={(e) => {
-                setPagina(0);
-                setFiltroEstado(e.target.value as FiltroEstado);
-              }}
-            >
-              <option value="">Todos los estados</option>
-              <option value="vigente">Vigentes</option>
-              <option value="por_vencer">Por vencer (30 días)</option>
-              <option value="vencido">Vencidos</option>
-              <option value="cancelado">Cancelados</option>
-              <option value="pendiente">Pendientes de confirmación</option>
-            </select>
-          </div>
+          {mostrarControlesSecundarios && (
+            <div id="panel-filtros-adicionales" className="filters-secondary-grid">
+              <div className="form-group">
+                <label htmlFor="filtro-estado" className="form-label">
+                  Estado
+                </label>
+                <select
+                  id="filtro-estado"
+                  className="form-select"
+                  value={filtroEstado}
+                  onChange={(e) => {
+                    setPagina(0);
+                    setFiltroEstado(e.target.value as FiltroEstado);
+                  }}
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="vigente">Vigentes</option>
+                  <option value="por_vencer">Por vencer (30 días)</option>
+                  <option value="vencido">Vencidos</option>
+                  <option value="cancelado">Cancelados</option>
+                  <option value="pendiente">Pendientes de confirmación</option>
+                </select>
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="filtro-tipo" className="form-label">
-              Tipo de documento
-            </label>
-            <select
-              id="filtro-tipo"
-              className="form-select"
-              value={filtroTipoId}
-              onChange={(e) => {
-                setPagina(0);
-                setFiltroTipoId(e.target.value);
-              }}
-            >
-              <option value="">Todos los tipos</option>
-              {tipos.map((t) => (
-                <option key={t.id} value={String(t.id)}>
-                  {t.nombre} ({t.clave})
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="form-group">
+                <label htmlFor="filtro-tipo" className="form-label">
+                  Tipo de documento
+                </label>
+                <select
+                  id="filtro-tipo"
+                  className="form-select"
+                  value={filtroTipoId}
+                  onChange={(e) => {
+                    setPagina(0);
+                    setFiltroTipoId(e.target.value);
+                  }}
+                >
+                  <option value="">Todos los tipos</option>
+                  {tipos.map((t) => (
+                    <option key={t.id} value={String(t.id)}>
+                      {t.nombre} ({t.clave})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="filtro-desde" className="form-label">
-              Emitido desde
-            </label>
-            <input
-              id="filtro-desde"
-              type="date"
-              aria-label="Emitido desde"
-              className="form-input"
-              value={fechaDesde}
-              onChange={(e) => {
-                setPagina(0);
-                setFechaDesde(e.target.value);
-              }}
-            />
-          </div>
+              <div className="form-group">
+                <label htmlFor="filtro-desde" className="form-label">
+                  Emitido desde
+                </label>
+                <input
+                  id="filtro-desde"
+                  type="date"
+                  aria-label="Emitido desde"
+                  className="form-input"
+                  value={fechaDesde}
+                  onChange={(e) => {
+                    setPagina(0);
+                    setFechaDesde(e.target.value);
+                  }}
+                />
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="filtro-hasta" className="form-label">
-              Emitido hasta
-            </label>
-            <input
-              id="filtro-hasta"
-              type="date"
-              aria-label="Emitido hasta"
-              className="form-input"
-              value={fechaHasta}
-              onChange={(e) => {
-                setPagina(0);
-                setFechaHasta(e.target.value);
-              }}
-            />
-          </div>
+              <div className="form-group">
+                <label htmlFor="filtro-hasta" className="form-label">
+                  Emitido hasta
+                </label>
+                <input
+                  id="filtro-hasta"
+                  type="date"
+                  aria-label="Emitido hasta"
+                  className="form-input"
+                  value={fechaHasta}
+                  onChange={(e) => {
+                    setPagina(0);
+                    setFechaHasta(e.target.value);
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </form>
 
-        {hayFiltrosActivos && (
+        {/* G10: Solo mostrar barra con «Limpiar filtros» cuando hay documentos en pantalla */}
+        {hayFiltrosActivos && documentos.length > 0 && (
           <div className="filters-active-bar">
             <span>
               Mostrando <strong>{documentos.length}</strong> de <strong>{totalRegistros}</strong>{' '}
@@ -389,18 +419,21 @@ export function DocumentosListaPage() {
         </div>
       )}
 
+      {/* G10: Lista vacía con una sola acción «Limpiar filtros» y el término buscado */}
       {!cargando && documentos.length === 0 && (
         <div className="card empty-state">
           <h2 className="section-title">No se encontraron documentos</h2>
           <p className="text-muted">
-            {hayFiltrosActivos
-              ? 'Ningún documento coincide con los filtros seleccionados.'
-              : 'Aún no se han emitido documentos en este proyecto piloto.'}
+            {busquedaActiva.trim()
+              ? `Ningún documento coincide con "${busquedaActiva.trim()}".`
+              : hayFiltrosActivos
+                ? 'Ningún documento coincide con los filtros seleccionados.'
+                : 'Aún no se han emitido documentos en este proyecto piloto.'}
           </p>
           <div className="empty-state-actions">
             {hayFiltrosActivos ? (
               <button type="button" className="btn btn-secondary" onClick={limpiarFiltros}>
-                Restablecer búsqueda
+                Limpiar filtros
               </button>
             ) : (
               puedeEmitir && (
@@ -416,14 +449,13 @@ export function DocumentosListaPage() {
       {!cargando && documentos.length > 0 && (
         <>
           {!esMovil ? (
-            /* F2: Tabla técnica compacta para escritorio y tableta (>= 768px) */
             <div className="card table-container">
               <table className="data-table">
                 <thead>
                   <tr>
                     <th scope="col">Folio</th>
                     <th scope="col">Destinatario</th>
-                    <th scope="col">Tipo</th>
+                    <th scope="col">Documento</th>
                     <th scope="col">Emitido</th>
                     <th scope="col">Vigencia</th>
                     <th scope="col">Estado</th>
@@ -431,7 +463,7 @@ export function DocumentosListaPage() {
                 </thead>
                 <tbody>
                   {documentos.map((doc) => {
-                    const estadoLed = resolverEstadoLed(doc);
+                    const estadoInd = resolverEstadoIndicador(doc);
                     const tipoInfo = Array.isArray(doc.tipos_documento)
                       ? doc.tipos_documento[0]
                       : doc.tipos_documento;
@@ -461,7 +493,8 @@ export function DocumentosListaPage() {
                         <td className="cell-nowrap">
                           <span className="tipo-clave-chip mono-text" title={nombreTipo}>
                             {claveTipo}
-                          </span>
+                          </span>{' '}
+                          <span className="tipo-nombre-inline">{nombreTipo}</span>
                         </td>
                         <td
                           className="cell-nowrap mono-fecha"
@@ -475,7 +508,7 @@ export function DocumentosListaPage() {
                             : 'Sin vencimiento'}
                         </td>
                         <td className="cell-nowrap">
-                          <LedEstado estado={estadoLed} />
+                          <EtiquetaEstado estado={estadoInd} />
                         </td>
                       </tr>
                     );
@@ -484,10 +517,9 @@ export function DocumentosListaPage() {
               </table>
             </div>
           ) : (
-            /* F4: Tarjetas compactas en móvil (< 768px) */
             <div className="mobile-cards-only">
               {documentos.map((doc) => {
-                const estadoLed = resolverEstadoLed(doc);
+                const estadoInd = resolverEstadoIndicador(doc);
                 const tipoInfo = Array.isArray(doc.tipos_documento)
                   ? doc.tipos_documento[0]
                   : doc.tipos_documento;
@@ -501,7 +533,7 @@ export function DocumentosListaPage() {
                   >
                     <div className="mobile-doc-row1">
                       <span className="folio-table-link mono-text">{doc.folio}</span>
-                      <LedEstado estado={estadoLed} />
+                      <EtiquetaEstado estado={estadoInd} />
                     </div>
                     <p className="mobile-doc-row2">{doc.destinatario}</p>
                     <p className="mobile-doc-row3">

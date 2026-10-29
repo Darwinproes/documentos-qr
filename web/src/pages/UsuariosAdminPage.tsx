@@ -139,13 +139,16 @@ export function UsuariosAdminPage() {
         </div>
       </div>
 
-      <div className="card info-banner">
-        <p>
-          <strong>Alta de nuevas cuentas:</strong> Para registrar un nuevo usuario, créelo primero en{' '}
-          <em>Supabase Auth → Users</em> y posteriormente asigne aquí su nombre, área y rol
-          correspondiente.
-        </p>
-      </div>
+      {/* G11: Aviso de alta plegable */}
+      <details className="card info-details">
+        <summary className="info-summary">¿Cómo dar de alta a alguien?</summary>
+        <div className="info-body">
+          <p>
+            Para registrar un nuevo usuario, créelo primero en <em>Supabase Auth → Users</em> y
+            posteriormente asigne aquí su nombre, área y rol correspondiente.
+          </p>
+        </div>
+      </details>
 
       {mensajeExito && (
         <div className="alert alert-success" role="status" aria-live="polite">
@@ -184,21 +187,24 @@ export function UsuariosAdminPage() {
                 <tbody>
                   {usuarios.map((u) => {
                     const modificado = filaModificada(u);
+                    const esPropio = perfilActual?.id === u.id;
                     return (
                       <tr key={u.id}>
-                        <td title={`ID interno: ${u.id}`}>
+                        <td>
                           <span className="sr-only">{u.nombre}</span>
-                          <input
-                            type="text"
-                            aria-label={`Nombre de ${u.nombre}`}
-                            className="form-input form-input-compact"
-                            value={u.nombre}
-                            title={`ID interno: ${u.id}`}
-                            onChange={(e) => actualizarFilaLocal(u.id, 'nombre', e.target.value)}
-                          />
-                          {perfilActual?.id === u.id && (
-                            <div className="cell-subtext">Tu cuenta actual</div>
-                          )}
+                          <div className="user-name-cell">
+                            <input
+                              type="text"
+                              aria-label={`Nombre de ${u.nombre}`}
+                              className="form-input form-input-compact"
+                              placeholder="Ej. María López"
+                              value={u.nombre}
+                              onChange={(e) => actualizarFilaLocal(u.id, 'nombre', e.target.value)}
+                            />
+                            {esPropio && (
+                              <span className="cuenta-actual-pill">Tu cuenta actual</span>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <input
@@ -265,12 +271,19 @@ export function UsuariosAdminPage() {
               </table>
             </div>
           ) : (
+            /* G11: Tarjetas compactas en celular (nombre+área en fila 1, rol+interruptor en fila 2) */
             <div className="mobile-cards-only">
               {usuarios.map((u) => {
                 const modificado = filaModificada(u);
+                const esPropio = perfilActual?.id === u.id;
                 return (
-                  <div key={u.id} className="card mobile-doc-card" title={`ID interno: ${u.id}`}>
-                    <div className="form-stack">
+                  <div key={u.id} className="card mobile-user-card">
+                    {esPropio && (
+                      <div className="mobile-user-head">
+                        <span className="cuenta-actual-pill">Tu cuenta actual</span>
+                      </div>
+                    )}
+                    <div className="mobile-user-row2col">
                       <div className="form-group">
                         <label htmlFor={`m-nom-${u.id}`} className="form-label">
                           Nombre
@@ -279,7 +292,8 @@ export function UsuariosAdminPage() {
                           id={`m-nom-${u.id}`}
                           type="text"
                           aria-label={`Nombre de ${u.nombre}`}
-                          className="form-input"
+                          className="form-input form-input-compact"
+                          placeholder="Ej. María López"
                           value={u.nombre}
                           onChange={(e) => actualizarFilaLocal(u.id, 'nombre', e.target.value)}
                         />
@@ -293,12 +307,15 @@ export function UsuariosAdminPage() {
                           id={`m-area-${u.id}`}
                           type="text"
                           aria-label={`Área de ${u.nombre}`}
-                          className="form-input"
+                          className="form-input form-input-compact"
+                          placeholder="Ej. Sistemas"
                           value={u.area || ''}
                           onChange={(e) => actualizarFilaLocal(u.id, 'area', e.target.value)}
                         />
                       </div>
+                    </div>
 
+                    <div className="mobile-user-row2col">
                       <div className="form-group">
                         <label htmlFor={`m-rol-${u.id}`} className="form-label">
                           Rol
@@ -306,7 +323,7 @@ export function UsuariosAdminPage() {
                         <select
                           id={`m-rol-${u.id}`}
                           aria-label={`Rol de ${u.nombre}`}
-                          className="form-select"
+                          className="form-select form-input-compact"
                           value={u.rol}
                           onChange={(e) =>
                             actualizarFilaLocal(u.id, 'rol', e.target.value as RolUsuario)
@@ -319,7 +336,7 @@ export function UsuariosAdminPage() {
                       </div>
 
                       <div className="form-group">
-                        <span className="form-label">Estado de acceso</span>
+                        <span className="form-label">Estado</span>
                         <button
                           type="button"
                           role="switch"
@@ -332,26 +349,26 @@ export function UsuariosAdminPage() {
                             <span className="switch-thumb" />
                           </span>
                           <span className="switch-label">
-                            {u.activo ? 'Usuario activo' : 'Usuario inactivo'}
+                            {u.activo ? 'Activo' : 'Inactivo'}
                           </span>
                         </button>
                       </div>
+                    </div>
 
-                      <div className="user-save-cell">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-block"
-                          disabled={!modificado || guardandoId === u.id}
-                          onClick={() => solicitarGuardarPerfil(u)}
-                        >
-                          {guardandoId === u.id ? 'Guardando…' : 'Guardar cambios'}
-                        </button>
-                        {guardadoRecienteId === u.id && !modificado && (
-                          <span className="saved-inline-pill" aria-live="polite">
-                            Guardado
-                          </span>
-                        )}
-                      </div>
+                    <div className="user-save-cell mt-xs">
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-block"
+                        disabled={!modificado || guardandoId === u.id}
+                        onClick={() => solicitarGuardarPerfil(u)}
+                      >
+                        {guardandoId === u.id ? 'Guardando…' : 'Guardar'}
+                      </button>
+                      {guardadoRecienteId === u.id && !modificado && (
+                        <span className="saved-inline-pill" aria-live="polite">
+                          Guardado
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
