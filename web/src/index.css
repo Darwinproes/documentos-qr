@@ -251,8 +251,12 @@ canvas {
   border-color: var(--tinta);
 }
 
+/* Al menos una pantalla de alto: el pie nunca aparece en la primera vista y no salta
+   cuando el resultado reemplaza al esqueleto (CLS medido en /v/:token: 0.13 → 0). */
 .public-main {
   flex: 1;
+  min-height: 100vh;
+  min-height: 100svh;
   padding: 24px 0 40px;
 }
 

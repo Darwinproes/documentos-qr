@@ -103,7 +103,7 @@ Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright
 ### Orquestador
 
 - [x] O10 — Migración `panel_resumen_bitacora`: `rpc('resumen_documentos')` y `rpc('bitacora_documento')` aplicadas y probadas (consulta sí, anónimo no); contrato actualizado — 2026-10-28
-- [ ] O11 — Revisar F1–F14 y Q1–Q5, volver a correr la QA completa, probar en el sitio real VENCIDO y CANCELADO con el documento de QA y publicar
+- [x] O11 — Revisar F1–F14 y Q1–Q5, volver a correr la QA completa, probar en el sitio real VENCIDO y CANCELADO con el documento de QA y publicar — 2026-10-29: publicado (commit 313123d); QA pública 18/18 en el sitio real; VENCIDO y CANCELADO comprobados con CONST-2026-000002; Lighthouse sin errores tras corregir el CLS (ver *Revisión → Fase 3*).
 
 **Identidad elegida por el usuario (2026-10-28): «Papel de seguridad» en lo público + «Trazabilidad» en el panel.** El diseño anterior se rechazó por genérico. Tokens y reglas: `decisiones-proyecto.md` → *Identidad elegida*. Maqueta: `design-system/documentos-qr-proesa/maquetas/direcciones-visuales.html` (también en https://claude.ai/artifact/PZzcYEwDz65vMgAECpZ8gT).
 
@@ -174,6 +174,11 @@ Resultado: **aprobado**. Antigravity no marcó sus tareas ni volvió a editar de
 - R16 — `DocumentosListaPage.tsx`: cambiar el filtro de estado borraba la búsqueda; ahora los filtros se combinan.
 
 Regla para los agentes: **nunca cambiar el producto para que pase una prueba**. Si la prueba o el simulado están mal, se corrigen ellos; si no se puede, se anota en *Preguntas al orquestador*.
+
+**En el sitio real (después del push de 313123d, Render `index-DywJQ_RW.js`):**
+- QA pública 18/18 (`npm run qa:publica`). Las fallas de la primera corrida eran selectores de la prueba: el texto «no registrado» ahora aparece en el título y en el sello de goma, y el aviso dice «El enlace no es válido». Se buscan por encabezado.
+- CONST-2026-000002 (documento de QA): `vigente_hasta` se movió de 2027-10-28 a 2026-10-28 → la API y la página dicen **vencido**; después se canceló por SQL (`cancelado_por` = la cuenta que lo emitió; el motivo y la bitácora dicen que fue la QA del orquestador) → **cancelado**. El cambio de vigencia no quedó en la bitácora porque su `check` solo admite emitido, pdf_generado y cancelado.
+- Lighthouse móvil: `/verificar` 99 / 100 / 100 (rendimiento / accesibilidad / buenas prácticas); `/v/:token` 92 / 100 / 100 con CLS 0.134: el pie quedaba a la vista mientras cargaba y saltaba al llegar el resultado. Corregido con `min-height: 100svh` en `.public-main` (CLS local 0.0015); se publica en el siguiente push.
 
 **Resultado de la QA (`npm run qa:panel`, sin parches):** 12/12 casos del panel; auditoría de 8 pantallas × 3 anchos sin desplazamiento horizontal, sin controles < 44 px, sin botones sin nombre, sin textos < 12 px, sin errores de consola ni HTTP ≥ 400.
 
