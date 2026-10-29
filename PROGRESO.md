@@ -162,6 +162,38 @@ Origen: el usuario detectó que un PDF editado conserva su QR legítimo y la ver
 
 Dependencias indirectas: Deno resuelve `node-forge` 1.4.2 y `@signpdf/utils` 3.4.0 (publicadas días antes); quedan fijas en `deno.lock` con su hash.
 
+## Fase 4 — Diseño del panel interno (2026-10-29)
+
+Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la skill de diseño (ui-ux-pro-max) sobre 41 capturas del panel (1440 y 360 px) y midió en el navegador: tabla de tipos de 822 px en 330 visibles, ejemplos de campo en #757575 sin «Ej.», botón deshabilitado al 55 % de opacidad. **Antigravity ya no toma capturas** (pedido del usuario): el orquestador revisa con `qa/` y sus propias capturas.
+
+### Antigravity (`tareas/ANTIGRAVITY-FASE4.md`)
+
+- [ ] G1 — Errores junto a cada campo y resumen que lista todos (login, emitir, tipos, modal)
+- [ ] G2 — Tipos de documento en tarjetas debajo de 768 px
+- [ ] G3 — Filtros plegados en celular (búsqueda visible + botón «Filtros»)
+- [ ] G4 — Ejemplos de campo con «Ej.» y ayuda de formato visible
+- [ ] G5 — Folio y código sin partir; huella y enlace abreviados con «Copiar» en emitir paso 4
+- [ ] G6 — Fechas en `dd/mm/aaaa` en todo el panel; «No capturado» para vacíos
+- [ ] G7 — Casillas y opciones de 18–20 px con fila clicable de 44 px; «Tipo activo» como interruptor
+- [ ] G8 — Botones de acción a todo el ancho en celular
+- [ ] G9 — Detalle en renglones etiqueta/valor; bitácora legible
+- [ ] G10 — Lista vacía con una sola acción y el término buscado
+- [ ] G11 — Usuarios compactos; «Guardar» deshabilitado con estilo claro
+- [ ] G12 — Indicador «Por vencer» sin partir en celular
+- [ ] G13 — Login sin nombre repetido; campos marcados al fallar
+
+### Codex (`tareas/CODEX-FASE4.md`)
+
+- [ ] H1 — Simulado con más tipos, fechas, bitácora con motivo y nombre largo
+- [ ] H2 — Casos del panel para G1, G2, G3, G4, G7 y G10
+- [ ] H3 — Auditoría: desplazamiento interno, folios partidos, fechas ISO, controles enormes
+- [ ] H4 — `npm run qa:estados`: capturas de todos los estados para el orquestador
+- [ ] H5 — README de `qa/` actualizado
+
+### Orquestador
+
+- [ ] O12 — Revisar G1–G13 con `qa:panel` y `qa:estados`, publicar con aprobación del usuario
+
 ## Pendientes del responsable (usuario)
 
 - [x] Regla Rewrite en Render (`/*` → `/index.html`) — 2026-10-28; V1 confirmado: QR escaneado desde iPhone → `valido` para CONST-2026-000001.

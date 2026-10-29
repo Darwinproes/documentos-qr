@@ -14,3 +14,4 @@ qa/salida/
 qa/node_modules/
 *.bak2
 *.bak3
+*.bak[0-9]
