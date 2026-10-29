@@ -157,7 +157,7 @@ Origen: el usuario detectó que un PDF editado conserva su QR legítimo y la ver
 - [x] S5 — `emitir-documento` v8 desplegada (`verify_jwt` true, import map `deno.json`); arranca bien (responde su propio 401 sin sesión).
 - [x] S6 — `web/public/certificado-proesa.cer` y enlace «Certificado de firma digital» en el pie público. QA del panel 12/12 y auditoría limpia.
 - [x] S7 — Documentado en `docs/03-seguridad.md` y en el documento compartido (sección «Firma digital del PDF», costo y estado del piloto).
-- [ ] S8 — **Usuario:** guardar en Supabase → Edge Functions → Secrets `FIRMA_P12_BASE64` (contenido de `FIRMA_P12_BASE64.txt`) y `FIRMA_P12_CLAVE` (contenido de `CONTRASENA-P12.txt`). El orquestador no pudo hacerlo: la herramienta de secretos está bloqueada para el agente.
+- [x] S8 — 2026-10-29: el usuario guardó los secretos. **Usuario:** guardar en Supabase → Edge Functions → Secrets `FIRMA_P12_BASE64` (contenido de `FIRMA_P12_BASE64.txt`) y `FIRMA_P12_CLAVE` (contenido de `CONTRASENA-P12.txt`). El orquestador no pudo hacerlo: la herramienta de secretos está bloqueada para el agente.
 - [ ] S9 — Emitir un documento real después de S8 y abrirlo en Adobe Reader (original y editado).
 
 Dependencias indirectas: Deno resuelve `node-forge` 1.4.2 y `@signpdf/utils` 3.4.0 (publicadas días antes); quedan fijas en `deno.lock` con su hash.
