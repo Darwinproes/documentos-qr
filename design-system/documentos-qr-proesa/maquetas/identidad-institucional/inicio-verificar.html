@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<title>Inicio de verificación institucional</title>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;family=Source+Sans+3:wght@400;600;700&amp;family=Source+Code+Pro:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#00699A}a:hover{color:#004E73}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; box-sizing: border-box; padding: 48px; background: #EDF0F4; font-family: 'Source Sans 3', sans-serif; color: #1F2933; display: flex; gap: 48px">
+
+  <section aria-label="Inicio de verificación en celular" style="width: 360px; height: 900px; background: #FFFFFF; border: 1px solid #D5DAE1; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; flex-shrink: 0">
+    <header style="background: #091E3E; padding: 14px 18px; display: flex; align-items: center; gap: 12px">
+      <img src="../../assets/emblema-proesa.png" alt="PROESA Electrónica" style="width: 26px; height: 38px; object-fit: contain">
+      <div style="display: flex; flex-direction: column">
+        <span style="color: #FFFFFF; font-weight: 700; font-size: 15px">PROESA Electrónica</span>
+        <span style="color: #C7D3E3; font-size: 12px">Registro de documentos oficiales</span>
+      </div>
+    </header>
+    <div style="padding: 24px 20px; display: flex; flex-direction: column; gap: 18px; flex-grow: 1">
+      <div style="border-bottom: 3px double #091E3E; padding-bottom: 14px">
+        <h1 style="margin: 0; font-family: 'Source Serif 4', serif; font-size: 26px; line-height: 1.2; color: #091E3E">Verificación de documentos oficiales</h1>
+        <p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5">¿Tiene el documento en papel? Escanee su código QR con la cámara del celular.</p>
+      </div>
+      <div role="tablist" aria-label="Forma de verificar" style="display: flex; border-bottom: 1px solid #D5DAE1">
+        <button type="button" role="tab" aria-selected="true" style="flex: 1; min-height: 44px; background: none; border: 0; border-bottom: 3px solid #091E3E; font: 700 14px 'Source Sans 3', sans-serif; color: #091E3E">Folio y código</button>
+        <button type="button" role="tab" aria-selected="false" style="flex: 1; min-height: 44px; background: none; border: 0; font: 600 14px 'Source Sans 3', sans-serif; color: #52606D">Archivo PDF</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="m-folio" style="font-weight: 600; font-size: 14px">Folio</label>
+        <input id="m-folio" placeholder="Ej. CONST-2026-000001" style="min-height: 44px; border: 1px solid #9AA5B1; border-radius: 4px; padding: 0 12px; font: 500 15px 'Source Code Pro', monospace">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="m-codigo" style="font-weight: 600; font-size: 14px">Código de verificación</label>
+        <input id="m-codigo" placeholder="Ej. 7KQ2M-XA9PD" style="min-height: 44px; border: 1px solid #9AA5B1; border-radius: 4px; padding: 0 12px; font: 500 15px 'Source Code Pro', monospace">
+        <span style="font-size: 13px; color: #52606D">10 caracteres, impresos junto al código QR.</span>
+      </div>
+      <button type="button" style="min-height: 46px; background: #091E3E; color: #FFFFFF; border: 0; border-radius: 4px; font: 700 15px 'Source Sans 3', sans-serif">Verificar documento</button>
+      <p style="margin: 0; font-size: 13px; color: #52606D; line-height: 1.45">Solo es oficial en <strong style="color: #1F2933; white-space: nowrap">documentos-qr.onrender.com</strong></p>
+    </div>
+  </section>
+
+  <section aria-label="Inicio de verificación en escritorio" style="flex-grow: 1; height: 900px; background: #FFFFFF; border: 1px solid #D5DAE1; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0">
+    <header style="background: #091E3E; padding: 16px 40px; display: flex; align-items: center; gap: 14px">
+      <img src="../../assets/emblema-proesa.png" alt="PROESA Electrónica" style="width: 28px; height: 41px; object-fit: contain">
+      <div style="flex-grow: 1; display: flex; flex-direction: column">
+        <span style="color: #FFFFFF; font-weight: 700; font-size: 16px">PROESA Electrónica</span>
+        <span style="color: #C7D3E3; font-size: 13px">Registro de documentos oficiales</span>
+      </div>
+      <a href="#" style="color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none; padding: 10px 14px; border: 1px solid #3A5277; border-radius: 4px">Verificar documento</a>
+    </header>
+    <div style="padding: 40px 56px; display: flex; flex-direction: column; gap: 28px; flex-grow: 1">
+      <div style="border-bottom: 3px double #091E3E; padding-bottom: 18px; max-width: 760px">
+        <h1 style="margin: 0; font-family: 'Source Serif 4', serif; font-size: 36px; color: #091E3E">Verificación de documentos oficiales</h1>
+        <p style="margin: 10px 0 0; font-size: 17px; line-height: 1.5">Compruebe si un documento fue emitido por PROESA Electrónica, si sigue vigente y a nombre de quién está.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px">
+        <div style="display: flex; flex-direction: column; gap: 18px">
+          <div role="tablist" aria-label="Forma de verificar" style="display: flex; border-bottom: 1px solid #D5DAE1">
+            <button type="button" role="tab" aria-selected="true" style="min-height: 44px; padding: 0 18px; background: none; border: 0; border-bottom: 3px solid #091E3E; font: 700 15px 'Source Sans 3', sans-serif; color: #091E3E">Por folio y código</button>
+            <button type="button" role="tab" aria-selected="false" style="min-height: 44px; padding: 0 18px; background: none; border: 0; font: 600 15px 'Source Sans 3', sans-serif; color: #52606D">Por archivo PDF</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="d-folio" style="font-weight: 600; font-size: 15px">Folio</label>
+            <input id="d-folio" placeholder="Ej. CONST-2026-000001" style="min-height: 46px; border: 1px solid #9AA5B1; border-radius: 4px; padding: 0 14px; font: 500 16px 'Source Code Pro', monospace">
+            <span style="font-size: 13px; color: #52606D">Formato PREFIJO-AÑO-NÚMERO.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="d-codigo" style="font-weight: 600; font-size: 15px">Código de verificación</label>
+            <input id="d-codigo" placeholder="Ej. 7KQ2M-XA9PD" style="min-height: 46px; border: 1px solid #9AA5B1; border-radius: 4px; padding: 0 14px; font: 500 16px 'Source Code Pro', monospace">
+            <span style="font-size: 13px; color: #52606D">10 caracteres, impresos junto al código QR. El guion se agrega solo.</span>
+          </div>
+          <button type="button" style="align-self: flex-start; min-height: 46px; padding: 0 28px; background: #091E3E; color: #FFFFFF; border: 0; border-radius: 4px; font: 700 15px 'Source Sans 3', sans-serif">Verificar documento</button>
+        </div>
+        <aside aria-label="Dónde están el folio y el código" style="background: #F4F6F9; border: 1px solid #E4E8ED; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+          <h2 style="margin: 0; font-family: 'Source Serif 4', serif; font-size: 20px; color: #091E3E">¿Dónde están el folio y el código?</h2>
+          <p style="margin: 0; font-size: 15px; line-height: 1.5">Al pie de la última página, en el recuadro «Verificación de autenticidad». Si tiene el papel, basta con escanear el QR.</p>
+          <div style="background: #FFFFFF; border: 1px solid #091E3E; padding: 12px 14px; display: flex; gap: 14px; align-items: center">
+            <svg width="64" height="64" viewBox="0 0 25 25" aria-hidden="true" shape-rendering="crispEdges" style="flex-shrink: 0"><defs><pattern id="qi" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="1" height="1" fill="#111"></rect><rect x="2" y="1" width="1" height="1" fill="#111"></rect><rect x="1" y="2" width="1" height="1" fill="#111"></rect></pattern></defs><rect width="25" height="25" fill="#fff"></rect><rect width="25" height="25" fill="url(#qi)"></rect><rect width="8" height="8" fill="#fff"></rect><rect x="17" width="8" height="8" fill="#fff"></rect><rect y="17" width="8" height="8" fill="#fff"></rect><path fill="#111" fill-rule="evenodd" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM18 0h7v7h-7zM19 1v5h5V1zM20 2h3v3h-3zM0 18h7v7H0zM1 19v5h5v-5zM2 20h3v3H2z"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 3px; font-size: 13px">
+              <strong style="font-family: 'Source Serif 4', serif; color: #091E3E">Verificación de autenticidad</strong>
+              <span>Folio <span style="font-family: 'Source Code Pro', monospace; font-weight: 600; color: #091E3E">CONST-2026-000001</span></span>
+              <span>Código <span style="font-family: 'Source Code Pro', monospace; font-weight: 600; color: #091E3E">7KQ2M-XA9PD</span></span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.5">¿Recibió el documento como archivo PDF? Use «Por archivo PDF»: el sistema detecta cualquier modificación.</p>
+        </aside>
+      </div>
+      <footer style="margin-top: auto; border-top: 1px solid #E4E8ED; padding-top: 16px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 14px; color: #52606D">
+        <span>© PROESA Electrónica</span>
+        <a href="#">Certificado de firma digital</a>
+        <a href="#">Contacto</a>
+        <a href="#">Acceso interno</a>
+      </footer>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

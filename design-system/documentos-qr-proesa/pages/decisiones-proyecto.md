@@ -1,8 +1,61 @@
 # Decisiones de diseño del proyecto (complementan y, donde choquen, mandan sobre MASTER.md)
 
-## Identidad elegida (2026-10-28): «Papel de seguridad» en lo público + «Trazabilidad» en el panel
+## Identidad institucional (2026-10-29) — VIGENTE
 
-**Esta sección manda sobre todo lo demás de este archivo y sobre MASTER.md.** Maquetas de referencia: `design-system/documentos-qr-proesa/maquetas/direcciones-visuales.html` (direcciones B y A). Origen: el usuario rechazó el diseño anterior por genérico y eligió la mezcla B + A.
+**Esta sección manda sobre todo lo demás de este archivo y sobre MASTER.md.** Reemplaza a «Identidad elegida (2026-10-28)», que queda abajo solo como historia. El usuario pidió una identidad más formal y eligió la dirección **A · Institucional** entre tres (lienzo: https://claude.ai/artifact/KH6QuAyvJ8nR9r2keRfCYU).
+
+Maquetas en el repositorio (ábrelas en el navegador; son la referencia exacta de colores, letra, espacios y textos):
+- `design-system/documentos-qr-proesa/maquetas/identidad-institucional/inicio-verificar.html` — inicio `/verificar` en celular y escritorio.
+- `design-system/documentos-qr-proesa/maquetas/identidad-institucional/resultado-panel-pdf.html` — resultado en celular, panel (lista) y PDF.
+
+**Idea.** Un registro oficial: como la página de verificación de una dependencia. Banda superior azul marino con el **emblema real de PROESA** (átomo sobre olas, tomado de proesaelectronica.com), títulos con serifa, datos en renglones con líneas finas, doble línea azul marino bajo los títulos principales. Nada decorativo: sin guilloche, sin trama, sin sellos de goma, sin animaciones.
+
+### Tokens
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--marino` | `#091E3E` | Banda superior, barra lateral, títulos, botón principal, doble línea |
+| `--marino-borde` | `#1E3558` | Separadores dentro de la barra lateral |
+| `--texto` | `#1F2933` | Texto corrido |
+| `--texto-tenue` | `#52606D` | Etiquetas y ayudas (6.5:1 sobre blanco) |
+| `--texto-en-marino` | `#C7D3E3` | Subtítulos sobre azul marino (10.9:1) |
+| `--azul-enlace` | `#00699A` | Enlaces y foco (6.0:1) — versión profunda del azul mar del logo |
+| `--azul-mar` | `#0093D3` | Solo decorativo (nunca texto ni fondo de texto: 3.4:1) |
+| `--fondo` | `#FFFFFF` | Fondo de páginas y tarjetas |
+| `--fondo-suave` | `#F4F6F9` | Avisos, ayuda, encabezado de tablas (`#F1F3F6`) |
+| `--linea` | `#E4E8ED` | Líneas entre renglones |
+| `--linea-fuerte` | `#D5DAE1` | Bordes de contenedores; `#9AA5B1` en campos |
+| `--valido` | `#1E7B45` | Válido / vigente |
+| `--vencido` | `#8A5A00` | Vencido / por vencer |
+| `--cancelado` | `#B42318` | Cancelado, no registrado, errores y acciones destructivas |
+| `--rojo-marca` | `#D4312C` | Solo dentro del emblema; nunca en la interfaz |
+
+Solo modo claro. Bordes casi rectos: 4 px en botones y campos, 10 px en contenedores grandes.
+
+### Tipografía (auto-hospedada con `@fontsource`, versiones fijas; nunca Google Fonts CDN)
+
+| Familia | Pesos | Rol |
+|---|---|---|
+| **Source Serif 4** | 600, 700 | Títulos de página, veredicto, títulos de secciones y del PDF en pantalla |
+| **Source Sans 3** | 400, 600, 700 | Todo el texto corrido, formularios, botones, tablas |
+| **Source Code Pro** | 500, 600 | Folio, código, huellas |
+
+Se retiran Spectral, Familjen Grotesk, IBM Plex Mono y Atkinson Hyperlegible.
+
+### Reglas
+
+- **Encabezado** (público y panel): banda `--marino` con emblema (24–28 px de ancho), «PROESA Electrónica» en Source Sans 700 blanco y «Registro de documentos oficiales» en `--texto-en-marino`.
+- **Títulos principales** con doble línea `3px double var(--marino)` debajo (o arriba en el veredicto).
+- **Veredicto**: ícono de línea en el color del estado (círculo con palomita, reloj, X, signo de interrogación) + título en Source Serif («Documento válido») + una oración que **dice a nombre de quién está**: «Emitido por PROESA Electrónica a nombre de **Juan Pérez López**. Vigente.» Debajo, los datos en renglones etiqueta/valor con líneas finas.
+- **Estados**: color + texto siempre; en tablas, punto de color + palabra.
+- **Botones**: principal `--marino` con texto blanco; secundario con contorno `--marino`; destructivo `--cancelado`. Altura mínima 44 px.
+- **Pestañas**: subrayado de 3 px `--marino` en la activa, sin cajas.
+- **Panel**: barra lateral `--marino`; elemento activo en blanco con texto `--marino`; encabezados de tabla en `#F1F3F6` con línea inferior de 2 px `--marino`.
+- **PDF**: encabezado con emblema, nombre, subtítulo y folio a la derecha, doble línea; título del documento centrado en serifa; bloque de verificación con borde de 1 px `--marino`. Ver la maqueta.
+
+## Identidad elegida (2026-10-28): «Papel de seguridad» en lo público + «Trazabilidad» en el panel — REEMPLAZADA el 2026-10-29
+
+**Ya no manda.** Se conserva como historia; ver «Identidad institucional» arriba. Maquetas de referencia: `design-system/documentos-qr-proesa/maquetas/direcciones-visuales.html` (direcciones B y A). Origen: el usuario rechazó el diseño anterior por genérico y eligió la mezcla B + A.
 
 **Idea.** La página pública se siente como un **certificado o un billete**: sello que se imprime, trama de seguridad (guilloche), renglones con puntos guía y sellos de goma para los estados negativos. El panel interno se siente como una **herramienta de una planta de electrónica**: verde de máscara de soldadura, líneas de cobre, estados como LED encendido y números de serie en monoespaciada. Lo que une a las dos caras: la tinta, los verdes y rojos de estado y la letra del texto corrido.
 

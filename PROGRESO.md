@@ -168,6 +168,16 @@ Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la
 
 ### Antigravity (`tareas/ANTIGRAVITY-FASE4.md`)
 
+**Identidad institucional elegida por el usuario (2026-10-29, dirección A):** ver `decisiones-proyecto.md` → *Identidad institucional* y las maquetas de `maquetas/identidad-institucional/`. Va antes de G1–G13.
+
+- [ ] N1 — Tokens y fuentes Source Serif 4 / Source Sans 3 / Source Code Pro
+- [ ] N2 — Emblema real de PROESA en encabezado, login y panel
+- [ ] N3 — Encabezado y pie públicos
+- [ ] N4 — Inicio `/verificar` renovado
+- [ ] N5 — Resultado público institucional («a nombre de …»), sin trama ni sellos
+- [ ] N6 — Login institucional
+- [ ] N7 — Panel con la nueva piel
+- [ ] N8 — Limpieza de tokens, fuentes y componentes retirados
 - [ ] G1 — Errores junto a cada campo y resumen que lista todos (login, emitir, tipos, modal)
 - [ ] G2 — Tipos de documento en tarjetas debajo de 768 px
 - [ ] G3 — Filtros plegados en celular (búsqueda visible + botón «Filtros»)
@@ -184,6 +194,11 @@ Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la
 
 ### Codex (`tareas/CODEX-FASE4.md`)
 
+- [ ] P1 — Emblema real en el PDF (base64 en `_shared/emblema.ts`)
+- [ ] P2 — Colores institucionales y título en Times-Bold
+- [ ] P3 — Bloque de verificación sobrio
+- [ ] P4 — Sin guilloche ni sello; se queda la línea de microtexto
+- [ ] P5 — Pruebas y PDF de ejemplo regenerados
 - [ ] H1 — Simulado con más tipos, fechas, bitácora con motivo y nombre largo
 - [ ] H2 — Casos del panel para G1, G2, G3, G4, G7 y G10
 - [ ] H3 — Auditoría: desplazamiento interno, folios partidos, fechas ISO, controles enormes
