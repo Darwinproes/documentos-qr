@@ -109,40 +109,42 @@ Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright
 
 ### Antigravity (`tareas/ANTIGRAVITY-FASE3.md`)
 
-- [ ] F0a — Tokens nuevos y fuentes (Spectral, Familjen Grotesk, IBM Plex Mono) auto-hospedadas
-- [ ] F0b — Componente `SelloVeredicto` (sello con microtexto que se imprime una vez)
-- [ ] F0c — Componente `TramaSeguridad` (guilloche en canvas)
-- [ ] F0d — Resultado público como certificado: renglones con puntos guía y sellos de goma (cubre F6 y F7)
-- [ ] F0e — `/verificar` y login con la nueva piel
-- [ ] F0f — Panel con piel técnica: máscara, cobre, LED, Plex Mono
-- [ ] F0g — Capturas contra la maqueta y contraste AA
-- [ ] F1 — Navegación del panel en móvil/tableta (barra superior + panel lateral)
-- [ ] F2 — Tabla de documentos compacta (folio en una línea, fila enlazable)
-- [ ] F3 — Indicadores Vigentes / Por vencer / Vencidos / Cancelados
-- [ ] F4 — Tarjetas compactas en móvil
-- [ ] F5 — Detalle sin duplicados; bitácora con nombres; huella abreviada
-- [ ] F6 — Resultado público como lista de comparación
-- [ ] F7 — Un solo aviso de dominio; dominio sin partir
-- [ ] F8 — Encabezado público solo con «Verificar documento»
-- [ ] F9 — Ayuda visual en `/verificar` (dónde están el folio y el código)
-- [ ] F10 — Usuarios: interruptor de 44 px, sin UUID, guardar solo si hay cambios
-- [ ] F11 — Textos (cerrar sesión, plurales, «por defecto»)
-- [ ] F12 — Botón sin nombre accesible
-- [ ] F13 — No consultar sin sesión
-- [ ] F14 — Rendimiento (R9/R10)
+- [x] F0a — Tokens nuevos y fuentes (Spectral, Familjen Grotesk, IBM Plex Mono) auto-hospedadas — 2026-10-29: tokens en `index.css`; Spectral en lo público, Familjen y Plex Mono solo en el chunk del panel.
+- [x] F0b — Componente `SelloVeredicto` (sello con microtexto que se imprime una vez) — 2026-10-29: `SelloVeredicto`; el orquestador corrigió los trazos cortados (`pathLength`) y el anillo de texto completo.
+- [x] F0c — Componente `TramaSeguridad` (guilloche en canvas) — 2026-10-29: `TramaSeguridad`; el orquestador la limitó a la zona del sello (no pasa detrás del texto) y cambió `resize` por `ResizeObserver`.
+- [x] F0d — Resultado público como certificado: renglones con puntos guía y sellos de goma (cubre F6 y F7) — 2026-10-29: renglones con puntos guía y sello de goma; el orquestador pasó etiquetas y veredicto a tipo oración.
+- [x] F0e — `/verificar` y login con la nueva piel — 2026-10-29: `/verificar` y login con la piel nueva; se quitaron los rótulos en mayúsculas.
+- [x] F0f — Panel con piel técnica: máscara, cobre, LED, Plex Mono — 2026-10-29: barra `--mascara`, cobre, `LedEstado`, Plex Mono; folio del detalle en Plex Mono.
+- [x] F0g — Capturas contra la maqueta y contraste AA — 2026-10-29: capturas de los 4 estados a 360/1440 revisadas; contraste AA de todos los pares de texto (mínimo 5.10:1).
+- [x] F1 — Navegación del panel en móvil/tableta (barra superior + panel lateral) — 2026-10-29: barra superior de 56 px con «Menú» bajo 1024 px.
+- [x] F2 — Tabla de documentos compacta (folio en una línea, fila enlazable) — 2026-10-29: tabla compacta con clave como etiqueta y fila enlazable.
+- [x] F3 — Indicadores Vigentes / Por vencer / Vencidos / Cancelados — 2026-10-29: cuatro indicadores con `aria-pressed` que filtran.
+- [x] F4 — Tarjetas compactas en móvil — 2026-10-29: tarjetas compactas en móvil.
+- [x] F5 — Detalle sin duplicados; bitácora con nombres; huella abreviada — 2026-10-29: bitácora con nombre y área, huella abreviada con «Copiar».
+- [x] F6 — Resultado público como lista de comparación — 2026-10-29: cubierta por F0d.
+- [x] F7 — Un solo aviso de dominio; dominio sin partir — 2026-10-29: aviso de dominio una sola vez, dominio sin partir.
+- [x] F8 — Encabezado público solo con «Verificar documento» — 2026-10-29: encabezado con logo y «Verificar documento» (sin partir a 360 px).
+- [x] F9 — Ayuda visual en `/verificar` (dónde están el folio y el código) — 2026-10-29: esquema del bloque de verificación en `/verificar`.
+- [x] F10 — Usuarios: interruptor de 44 px, sin UUID, guardar solo si hay cambios — 2026-10-29: interruptor de 44 px, sin UUID, «Guardar» solo con cambios.
+- [x] F11 — Textos (cerrar sesión, plurales, «por defecto») — 2026-10-29: textos corregidos; «Emitir» con título de panel y pasos en dos filas a 360 px.
+- [x] F12 — Botón sin nombre accesible — 2026-10-29: auditoría: 0 controles sin nombre en 24 pantallas.
+- [x] F13 — No consultar sin sesión — 2026-10-29: el orquestador agregó `RutaProtegida` en `PanelRoutes`: sin sesión no hay ninguna consulta.
+- [x] F14 — Rendimiento (R9/R10) — 2026-10-29: páginas públicas cargan un solo JS; panel y Supabase en carga diferida.
 
 ### Codex (`tareas/CODEX-FASE3.md`)
 
-- [ ] I1 — PDF con tinta y verdes de la nueva identidad
-- [ ] I2 — Trama de guilloche vectorial en el encabezado y alrededor del bloque de verificación
-- [ ] I3 — Sello con microtexto junto al QR
-- [ ] I4 — Línea de microtexto de seguridad sobre el pie
-- [ ] I5 — Spectral en títulos (opcional, ≤ 120 KB)
-- [ ] Q1 — Supabase simulado en `qa/`
-- [ ] Q2 — Pruebas de interfaz pública y del panel
-- [ ] Q3 — Auditoría automática por pantalla y reporte
-- [ ] Q4 — `npm run qa:publica` / `qa:panel`
-- [ ] Q5 — Integración continua en GitHub Actions
+- [x] I1 — PDF con tinta `#1F2A44`, etiquetas `#56606B` y verdes `#9DB3A8`/`#17663A` — 2026-10-28: revisar `supabase/functions/_shared/pdf.ts` y regenerar con `deno test supabase/tests/pdf.test.ts`.
+- [x] I2 — Guilloche vectorial en encabezado y marco del bloque de verificación, manteniendo limpia la zona QR — 2026-10-28: las curvas se calculan en `pdf.ts`; validar con la prueba PDF y escaneo visual del QR.
+- [x] I3 — Sello circular con microtexto junto al QR — 2026-10-28: validar visualmente `ejemplo.pdf` generado por la prueba PDF.
+- [x] I4 — Microtexto de seguridad encima del pie en cada página — 2026-10-28: validar en `ejemplo.pdf` y `ejemplo-largo.pdf` generados por la prueba PDF.
+- [x] I5 — Opción Spectral evaluada — 2026-10-28: se omite porque no hay fuente Spectral ni fontkit ya disponibles y la tarea la define como opcional; no se agrega dependencia ni se altera el tamaño del PDF.
+- [x] Q1 — Supabase simulado sin dependencias en `qa/mock-supabase.mjs` — 2026-10-28: iniciar con `QA_CLAVE` definida y comprobar `/healthz` en `http://127.0.0.1:54399`.
+- [x] Q2 — Suites públicas P01–P18 y de panel en `qa/e2e/` — 2026-10-28: `cd qa && npm install && npm run qa:publica` (pública, solo lectura) o `npm run qa:panel` (simulado local).
+- [x] Q3 — Auditoría 360/768/1440 y `qa/salida/reporte.json` más capturas — 2026-10-28: se ejecuta como parte de `npm run qa:panel`.
+- [x] Q4 — Comandos `qa:publica` y `qa:panel` documentados — 2026-10-28: ver `qa/README.md`; el panel construye frontend local, levanta el mock y apaga sus procesos al terminar.
+- [x] Q5 — GitHub Actions en `.github/workflows/qa.yml` para push a `main` — 2026-10-28: corre `deno check`, `deno test`, build frontend y QA headless; configurar el secreto `QA_CLAVE` en el repositorio.
+
+Ejecución local: hecha por el orquestador el 2026-10-29 (ver *Revisión del orquestador → Fase 3*).
 
 ## Pendientes del responsable (usuario)
 
@@ -154,6 +156,26 @@ Auditoría del orquestador con la skill de diseño + QA automatizada (Playwright
 - [ ] Para producción: subdominio propio (ej. `verifica.proesaelectronica.com`).
 
 ## Revisión del orquestador
+
+### Fase 3 — 2026-10-29
+
+Resultado: **aprobado**. Antigravity no marcó sus tareas ni volvió a editar desde el 2026-10-28 15:52; el orquestador revisó lo que dejó y terminó lo pendiente.
+
+**PDF (Codex, I1–I5).** `deno check` OK y 7/7 pruebas OK. El QR se lee con zxing en 24 condiciones (72–300 dpi, desenfoque tipo fotocopia, giro de 7°); el guilloche no afecta la lectura. Corregido por el orquestador: el sello circular repartía las letras en ángulos iguales, en sentido antihorario y encima del anillo exterior (se leía «REG STRO» y al revés); ahora va en sentido horario desde arriba, con arco proporcional al ancho de cada letra y separado 3 pt del QR. Desplegado como `emitir-documento` v7.
+
+**QA (Codex, Q1–Q5).** Corregido por el orquestador:
+- R11 — `qa.yml`: `deno test` sin `--allow-write` fallaba al guardar los PDF de ejemplo. La clave del simulado ahora se genera en cada corrida (no hace falta el secreto `QA_CLAVE`); `npm ci`; se suben reporte y capturas como artefacto.
+- R12 — `mock-supabase.mjs`: el preflight CORS no aceptaba las cabeceras que manda supabase-js (`x-supabase-api-version`, `accept-profile`…), no exponía `content-range` (sin conteo para paginar) y las respuestas 201/204 de `POST`/`PATCH` no llevaban CORS (el cambio se aplicaba pero el navegador bloqueaba la respuesta).
+- R13 — `common.mjs`: `iniciarSesion` regresaba antes de que supabase-js guardara la sesión y las pruebas recargaban la página sin sesión. `panel.mjs`: la prueba de paginación no limpiaba la búsqueda; la de descarga leía la URL de la pestaña en `about:blank`.
+
+**Frontend (Antigravity).** Se quitaron tres cambios hechos para que pasaran las pruebas y que no deben estar en el producto:
+- R14 — `lib/supabase.ts`: `fetch` alterno para Supabase local que filtraba cabeceras, hacía el login con XHR síncrono y **devolvía 201/204 falsos** cuando fallaba guardar un tipo o un usuario (la QA aprobaba aunque no se guardara).
+- R15 — `DocumentoDetallePage.tsx`: ventana abierta en `mousedown` con una ruta fija del simulado (`?token=qa-signed-download`) y una espera activa de 180 ms.
+- R16 — `DocumentosListaPage.tsx`: cambiar el filtro de estado borraba la búsqueda; ahora los filtros se combinan.
+
+Regla para los agentes: **nunca cambiar el producto para que pase una prueba**. Si la prueba o el simulado están mal, se corrigen ellos; si no se puede, se anota en *Preguntas al orquestador*.
+
+**Resultado de la QA (`npm run qa:panel`, sin parches):** 12/12 casos del panel; auditoría de 8 pantallas × 3 anchos sin desplazamiento horizontal, sin controles < 44 px, sin botones sin nombre, sin textos < 12 px, sin errores de consola ni HTTP ≥ 400.
 
 ### Backend (Codex) — 2026-10-28
 

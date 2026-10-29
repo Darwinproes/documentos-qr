@@ -1,117 +1,164 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { EsqueletoLista } from '../components/Esqueletos';
-import { EtiquetaEstado } from '../components/EtiquetaEstado';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { LayoutPanel } from '../components/LayoutPanel';
+import { EstadoVisualLed, LedEstado } from '../components/LedEstado';
 import { useAuth } from '../context/AuthContext';
 import {
-  calcularEstadoVisual,
-  formatearFecha,
-  formatearFechaHora,
-  hoyLocalIso
+  esFechaVencida,
+  esPorVencer30Dias,
+  formatearFechaCorta,
+  formatearFechaHoraMX,
+  hoyIsoLocal,
+  sumarDiasIso
 } from '../lib/formato';
 import { supabase } from '../lib/supabase';
-import { DocumentoResumen, TipoDocumento } from '../lib/tipos';
-import { useCargaDiferida, useTituloDocumento } from '../lib/useCargaDiferida';
+import { DocumentoPanel, ResumenDocumentos, TipoDocumento } from '../lib/tipos';
+import { useCargaDiferida, useEsMovil, useTituloDocumento } from '../lib/useCargaDiferida';
 
 const TAMANO_PAGINA = 25;
 
-function obtenerNombreTipo(doc: DocumentoResumen): string {
-  const td = doc.tipos_documento;
-  if (!td) return '—';
-  if (Array.isArray(td)) {
-    return td[0] ? `${td[0].clave} — ${td[0].nombre}` : '—';
-  }
-  return `${td.clave} — ${td.nombre}`;
+type FiltroEstado = '' | 'vigente' | 'por_vencer' | 'vencido' | 'cancelado' | 'pendiente';
+
+function resolverEstadoLed(doc: DocumentoPanel): EstadoVisualLed {
+  if (doc.estado === 'cancelado') return 'cancelado';
+  if (doc.estado === 'pendiente') return 'pendiente';
+  if (doc.vigente_hasta && esFechaVencida(doc.vigente_hasta)) return 'vencido';
+  if (doc.vigente_hasta && esPorVencer30Dias(doc.vigente_hasta)) return 'por_vencer';
+  return 'vigente';
 }
 
 export function DocumentosListaPage() {
-  useTituloDocumento('Panel · Documentos');
+  useTituloDocumento('Panel · Documentos emitidos');
 
   const { perfil } = useAuth();
+  const navigate = useNavigate();
+  const esMovil = useEsMovil(768);
+  const puedeEmitir = perfil?.rol === 'admin' || perfil?.rol === 'emisor';
 
-  const [tipos, setTipos] = useState<TipoDocumento[]>([]);
-  const [documentos, setDocumentos] = useState<DocumentoResumen[]>([]);
-  const [total, setTotal] = useState<number>(0);
+  const [documentos, setDocumentos] = useState<DocumentoPanel[]>([]);
+  const [tipos, setTipos] = useState<Pick<TipoDocumento, 'id' | 'clave' | 'nombre'>[]>([]);
+  const [totalRegistros, setTotalRegistros] = useState<number>(0);
   const [pagina, setPagina] = useState<number>(0);
+  const [resumen, setResumen] = useState<ResumenDocumentos>({
+    vigentes: 0,
+    por_vencer: 0,
+    vencidos: 0,
+    cancelados: 0,
+    total: 0
+  });
 
-  const [busquedaInput, setBusquedaInput] = useState<string>('');
+  const [busqueda, setBusqueda] = useState<string>('');
   const [busquedaActiva, setBusquedaActiva] = useState<string>('');
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('');
   const [filtroTipoId, setFiltroTipoId] = useState<string>('');
-  const [filtroEstado, setFiltroEstado] = useState<string>('');
+  const [fechaDesde, setFechaDesde] = useState<string>('');
+  const [fechaHasta, setFechaHasta] = useState<string>('');
 
   const [cargando, setCargando] = useState<boolean>(true);
-  const mostrarEsqueleto = useCargaDiferida(cargando, 300);
-  const [error, setError] = useState<string | null>(null);
-
-  const puedeEmitir = perfil?.rol === 'emisor' || perfil?.rol === 'admin';
+  const mostrarEsqueleto = useCargaDiferida(cargando, 200);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  const ultimaPeticionRef = useRef<number>(0);
 
   useEffect(() => {
-    async function cargarTipos() {
-      const { data } = await supabase
-        .from('tipos_documento')
-        .select('id,clave,nombre,descripcion,prefijo_folio,vigencia_dias,campos,activo')
-        .order('nombre');
-      if (data) {
-        setTipos(data as TipoDocumento[]);
+    async function cargarCatalogoYResumen() {
+      const [tiposRes, resumenRes] = await Promise.all([
+        supabase.from('tipos_documento').select('id,clave,nombre').order('nombre'),
+        supabase.rpc('resumen_documentos')
+      ]);
+
+      if (tiposRes.data) {
+        setTipos(tiposRes.data as Pick<TipoDocumento, 'id' | 'clave' | 'nombre'>[]);
+      }
+      if (resumenRes.data && typeof resumenRes.data === 'object') {
+        const r = resumenRes.data as Partial<ResumenDocumentos>;
+        setResumen({
+          vigentes: Number(r.vigentes ?? 0),
+          por_vencer: Number(r.por_vencer ?? 0),
+          vencidos: Number(r.vencidos ?? 0),
+          cancelados: Number(r.cancelados ?? 0),
+          total: Number(r.total ?? 0)
+        });
       }
     }
-    void cargarTipos();
+    void cargarCatalogoYResumen();
   }, []);
 
   const cargarDocumentos = useCallback(async () => {
+    const idPeticion = ++ultimaPeticionRef.current;
     setCargando(true);
-    setError(null);
+    setErrorCarga(null);
 
-    const desde = pagina * TAMANO_PAGINA;
-    const hasta = desde + TAMANO_PAGINA - 1;
+    try {
+      const desde = pagina * TAMANO_PAGINA;
+      const hasta = desde + TAMANO_PAGINA - 1;
+      const hoy = hoyIsoLocal();
+      const limite30 = sumarDiasIso(30);
 
-    let query = supabase
-      .from('documentos')
-      .select(
-        'id,folio,estado,destinatario,emitido_en,vigente_hasta,tipo_id,tipos_documento(clave,nombre)',
-        { count: 'exact' }
-      );
+      let query = supabase
+        .from('documentos')
+        .select(
+          'id,tipo_id,folio,estado,destinatario,emitido_por,emitido_en,vigente_hasta,datos,pdf_path,pdf_sha256,confirmado_en,cancelado_por,cancelado_en,motivo_cancelacion,tipos_documento(clave,nombre)',
+          { count: 'exact' }
+        )
+        .order('emitido_en', { ascending: false })
+        .range(desde, hasta);
 
-    if (filtroTipoId) {
-      query = query.eq('tipo_id', Number(filtroTipoId));
+      if (busquedaActiva.trim()) {
+        const termino = busquedaActiva.trim().replace(/[,%]/g, '');
+        query = query.or(`folio.ilike.%${termino}%,destinatario.ilike.%${termino}%`);
+      }
+
+      if (filtroTipoId) {
+        query = query.eq('tipo_id', Number(filtroTipoId));
+      }
+
+      if (filtroEstado === 'cancelado' || filtroEstado === 'pendiente') {
+        query = query.eq('estado', filtroEstado);
+      } else if (filtroEstado === 'vencido') {
+        query = query.eq('estado', 'vigente').lt('vigente_hasta', hoy);
+      } else if (filtroEstado === 'por_vencer') {
+        query = query
+          .eq('estado', 'vigente')
+          .gte('vigente_hasta', hoy)
+          .lte('vigente_hasta', limite30);
+      } else if (filtroEstado === 'vigente') {
+        query = query.eq('estado', 'vigente');
+      }
+
+      if (fechaDesde) {
+        query = query.gte('emitido_en', `${fechaDesde}T00:00:00.000Z`);
+      }
+
+      if (fechaHasta) {
+        query = query.lte('emitido_en', `${fechaHasta}T23:59:59.999Z`);
+      }
+
+      const { data, error, count } = await query;
+      if (idPeticion !== ultimaPeticionRef.current) return;
+
+      if (error) {
+        setErrorCarga('No fue posible cargar la lista de documentos. Intente nuevamente.');
+        return;
+      }
+
+      const lista = (data || []) as unknown as DocumentoPanel[];
+      const filtrada =
+        filtroEstado === 'vigente'
+          ? lista.filter((d) => !d.vigente_hasta || !esFechaVencida(d.vigente_hasta))
+          : lista;
+
+      setDocumentos(filtrada);
+      const totalSinCount =
+        filtrada.length === TAMANO_PAGINA
+          ? (pagina + 2) * TAMANO_PAGINA
+          : pagina * TAMANO_PAGINA + filtrada.length;
+      setTotalRegistros(count ?? totalSinCount);
+    } finally {
+      if (idPeticion === ultimaPeticionRef.current) {
+        setCargando(false);
+      }
     }
-
-    const hoy = hoyLocalIso();
-    if (!filtroEstado) {
-      query = query.neq('estado', 'pendiente');
-    } else if (filtroEstado === 'pendiente') {
-      query = query.eq('estado', 'pendiente');
-    } else if (filtroEstado === 'cancelado') {
-      query = query.eq('estado', 'cancelado');
-    } else if (filtroEstado === 'vigente') {
-      query = query
-        .eq('estado', 'vigente')
-        .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`);
-    } else if (filtroEstado === 'vencido') {
-      query = query.eq('estado', 'vigente').lt('vigente_hasta', hoy);
-    }
-
-    const termino = busquedaActiva.trim().replace(/[,()]/g, ' ');
-    if (termino) {
-      query = query.or(`folio.ilike.%${termino}%,destinatario.ilike.%${termino}%`);
-    }
-
-    const { data, error: errDb, count } = await query
-      .order('emitido_en', { ascending: false })
-      .range(desde, hasta);
-
-    if (errDb) {
-      setError('No se pudo cargar la lista de documentos.');
-      setDocumentos([]);
-      setTotal(0);
-    } else {
-      setDocumentos((data || []) as DocumentoResumen[]);
-      setTotal(count || 0);
-    }
-
-    setCargando(false);
-  }, [pagina, filtroTipoId, filtroEstado, busquedaActiva]);
+  }, [pagina, busquedaActiva, filtroEstado, filtroTipoId, fechaDesde, fechaHasta]);
 
   useEffect(() => {
     void cargarDocumentos();
@@ -120,76 +167,119 @@ export function DocumentosListaPage() {
   const manejarBuscarSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPagina(0);
-    setBusquedaActiva(busquedaInput);
+    setBusquedaActiva(busqueda);
+  };
+
+  const alternarIndicador = (estado: FiltroEstado) => {
+    setPagina(0);
+    setFiltroEstado((actual) => (actual === estado ? '' : estado));
   };
 
   const limpiarFiltros = () => {
-    setBusquedaInput('');
+    setBusqueda('');
     setBusquedaActiva('');
-    setFiltroTipoId('');
     setFiltroEstado('');
+    setFiltroTipoId('');
+    setFechaDesde('');
+    setFechaHasta('');
     setPagina(0);
   };
 
-  const totalPaginas = Math.max(1, Math.ceil(total / TAMANO_PAGINA));
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / TAMANO_PAGINA));
+  const hayFiltrosActivos = Boolean(
+    busquedaActiva || filtroEstado || filtroTipoId || fechaDesde || fechaHasta
+  );
 
   return (
     <LayoutPanel>
       <div className="panel-header-row">
         <div>
-          <h1 className="page-title">Documentos emitidos</h1>
-          <p className="page-subtitle">
-            Consulta y seguimiento de documentos oficiales en el registro central.
+          <h1 className="panel-page-title">Documentos emitidos</h1>
+          <p className="panel-page-subtitle">
+            Consulte, filtre y verifique el estado de los documentos oficiales registrados.
           </p>
         </div>
         {puedeEmitir && (
           <Link to="/panel/emitir" className="btn btn-primary">
-            Emitir documento
+            Nueva emisión
           </Link>
         )}
       </div>
 
+      {/* F3: Indicadores superiores como filtros rápidos */}
+      <div className="indicadores-grid" role="group" aria-label="Indicadores de vigencia y cancelación">
+        <button
+          type="button"
+          className={`indicador-card ${filtroEstado === 'vigente' ? 'indicador-card-activo' : ''}`}
+          aria-pressed={filtroEstado === 'vigente'}
+          onClick={() => alternarIndicador('vigente')}
+        >
+          <div className="indicador-top">
+            <LedEstado estado="vigente" mostrarTexto={false} />
+            <span className="indicador-etiqueta">Vigentes</span>
+          </div>
+          <span className="indicador-numero">{resumen.vigentes}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`indicador-card ${filtroEstado === 'por_vencer' ? 'indicador-card-activo' : ''}`}
+          aria-pressed={filtroEstado === 'por_vencer'}
+          onClick={() => alternarIndicador('por_vencer')}
+        >
+          <div className="indicador-top">
+            <LedEstado estado="por_vencer" mostrarTexto={false} />
+            <span className="indicador-etiqueta">Por vencer (30 días)</span>
+          </div>
+          <span className="indicador-numero">{resumen.por_vencer}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`indicador-card ${filtroEstado === 'vencido' ? 'indicador-card-activo' : ''}`}
+          aria-pressed={filtroEstado === 'vencido'}
+          onClick={() => alternarIndicador('vencido')}
+        >
+          <div className="indicador-top">
+            <LedEstado estado="vencido" mostrarTexto={false} />
+            <span className="indicador-etiqueta">Vencidos</span>
+          </div>
+          <span className="indicador-numero">{resumen.vencidos}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`indicador-card ${filtroEstado === 'cancelado' ? 'indicador-card-activo' : ''}`}
+          aria-pressed={filtroEstado === 'cancelado'}
+          onClick={() => alternarIndicador('cancelado')}
+        >
+          <div className="indicador-top">
+            <LedEstado estado="cancelado" mostrarTexto={false} />
+            <span className="indicador-etiqueta">Cancelados</span>
+          </div>
+          <span className="indicador-numero">{resumen.cancelados}</span>
+        </button>
+      </div>
+
       <section className="card filters-card" aria-label="Filtros de búsqueda">
         <form onSubmit={manejarBuscarSubmit} className="filters-grid">
-          <div className="form-group">
-            <label htmlFor="filtro-busqueda" className="form-label">
+          <div className="form-group filter-search-group">
+            <label htmlFor="buscar-doc" className="form-label">
               Buscar por folio o destinatario
             </label>
-            <div className="input-with-btn">
+            <div className="search-input-row">
               <input
-                id="filtro-busqueda"
+                id="buscar-doc"
                 type="search"
                 className="form-input"
-                placeholder="Ej. CONST-2026 o Juan Pérez…"
-                value={busquedaInput}
-                onChange={(e) => setBusquedaInput(e.target.value)}
+                placeholder="Ej. CONST-2026-000001 o María López"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
               />
               <button type="submit" className="btn btn-secondary">
                 Buscar
               </button>
             </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="filtro-tipo" className="form-label">
-              Tipo de documento
-            </label>
-            <select
-              id="filtro-tipo"
-              className="form-select"
-              value={filtroTipoId}
-              onChange={(e) => {
-                setFiltroTipoId(e.target.value);
-                setPagina(0);
-              }}
-            >
-              <option value="">Todos los tipos</option>
-              {tipos.map((t) => (
-                <option key={t.id} value={String(t.id)}>
-                  {t.clave} — {t.nombre}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="form-group">
@@ -201,95 +291,191 @@ export function DocumentosListaPage() {
               className="form-select"
               value={filtroEstado}
               onChange={(e) => {
-                setFiltroEstado(e.target.value);
                 setPagina(0);
+                setFiltroEstado(e.target.value as FiltroEstado);
               }}
             >
-              <option value="">Todos (excepto pendientes)</option>
-              <option value="vigente">Vigente</option>
-              <option value="vencido">Vencido</option>
-              <option value="cancelado">Cancelado</option>
-              <option value="pendiente">Pendiente (sin confirmar PDF)</option>
+              <option value="">Todos los estados</option>
+              <option value="vigente">Vigentes</option>
+              <option value="por_vencer">Por vencer (30 días)</option>
+              <option value="vencido">Vencidos</option>
+              <option value="cancelado">Cancelados</option>
+              <option value="pendiente">Pendientes de confirmación</option>
             </select>
           </div>
 
-          <div className="form-group filters-actions">
-            <button type="button" className="btn btn-outline" onClick={limpiarFiltros}>
+          <div className="form-group">
+            <label htmlFor="filtro-tipo" className="form-label">
+              Tipo de documento
+            </label>
+            <select
+              id="filtro-tipo"
+              className="form-select"
+              value={filtroTipoId}
+              onChange={(e) => {
+                setPagina(0);
+                setFiltroTipoId(e.target.value);
+              }}
+            >
+              <option value="">Todos los tipos</option>
+              {tipos.map((t) => (
+                <option key={t.id} value={String(t.id)}>
+                  {t.nombre} ({t.clave})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="filtro-desde" className="form-label">
+              Emitido desde
+            </label>
+            <input
+              id="filtro-desde"
+              type="date"
+              aria-label="Emitido desde"
+              className="form-input"
+              value={fechaDesde}
+              onChange={(e) => {
+                setPagina(0);
+                setFechaDesde(e.target.value);
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="filtro-hasta" className="form-label">
+              Emitido hasta
+            </label>
+            <input
+              id="filtro-hasta"
+              type="date"
+              aria-label="Emitido hasta"
+              className="form-input"
+              value={fechaHasta}
+              onChange={(e) => {
+                setPagina(0);
+                setFechaHasta(e.target.value);
+              }}
+            />
+          </div>
+        </form>
+
+        {hayFiltrosActivos && (
+          <div className="filters-active-bar">
+            <span>
+              Mostrando <strong>{documentos.length}</strong> de <strong>{totalRegistros}</strong>{' '}
+              registros
+            </span>
+            <button type="button" className="btn-link" onClick={limpiarFiltros}>
               Limpiar filtros
             </button>
           </div>
-        </form>
+        )}
       </section>
 
-      {error && (
+      {errorCarga && (
         <div className="alert alert-error" role="alert">
-          {error}
+          {errorCarga}
         </div>
       )}
 
-      <section className="card table-card" aria-live="polite">
-        {cargando ? (
-          mostrarEsqueleto ? (
-            <EsqueletoLista />
-          ) : null
-        ) : documentos.length === 0 ? (
-          <div className="state-card">
-            <h2 className="state-heading">No hay documentos para mostrar</h2>
-            <p className="state-description">
-              No se encontraron documentos emitidos con los criterios seleccionados.
-            </p>
-            {puedeEmitir && (
-              <div className="state-actions">
+      {cargando && mostrarEsqueleto && (
+        <div className="card" role="status" aria-live="polite">
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+          <div className="skeleton skeleton-row" />
+          <p className="sr-only">Cargando listado de documentos…</p>
+        </div>
+      )}
+
+      {!cargando && documentos.length === 0 && (
+        <div className="card empty-state">
+          <h2 className="section-title">No se encontraron documentos</h2>
+          <p className="text-muted">
+            {hayFiltrosActivos
+              ? 'Ningún documento coincide con los filtros seleccionados.'
+              : 'Aún no se han emitido documentos en este proyecto piloto.'}
+          </p>
+          <div className="empty-state-actions">
+            {hayFiltrosActivos ? (
+              <button type="button" className="btn btn-secondary" onClick={limpiarFiltros}>
+                Restablecer búsqueda
+              </button>
+            ) : (
+              puedeEmitir && (
                 <Link to="/panel/emitir" className="btn btn-primary">
-                  Emitir documento
+                  Emitir el primer documento
                 </Link>
-              </div>
+              )
             )}
           </div>
-        ) : (
-          <>
-            {/* Tabla para escritorio (>= 768 px) */}
-            <div className="table-responsive desktop-only-table">
+        </div>
+      )}
+
+      {!cargando && documentos.length > 0 && (
+        <>
+          {!esMovil ? (
+            /* F2: Tabla técnica compacta para escritorio y tableta (>= 768px) */
+            <div className="card table-container">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Folio</th>
-                    <th>Tipo</th>
-                    <th>Destinatario</th>
-                    <th>Emitido</th>
-                    <th>Vigencia</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th scope="col">Folio</th>
+                    <th scope="col">Destinatario</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Emitido</th>
+                    <th scope="col">Vigencia</th>
+                    <th scope="col">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {documentos.map((doc) => {
-                    const estadoVisual = calcularEstadoVisual(doc.estado, doc.vigente_hasta);
+                    const estadoLed = resolverEstadoLed(doc);
+                    const tipoInfo = Array.isArray(doc.tipos_documento)
+                      ? doc.tipos_documento[0]
+                      : doc.tipos_documento;
+                    const claveTipo = tipoInfo?.clave ?? `#${doc.tipo_id}`;
+                    const nombreTipo = tipoInfo?.nombre ?? `Tipo #${doc.tipo_id}`;
+
                     return (
-                      <tr key={doc.id}>
-                        <td className="mono-text font-semibold">
-                          <Link to={`/panel/documentos/${doc.id}`} className="table-link">
+                      <tr
+                        key={doc.id}
+                        className="table-row-clickable"
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('a')) return;
+                          navigate(`/panel/documentos/${doc.id}`);
+                        }}
+                      >
+                        <td className="cell-nowrap">
+                          <Link
+                            to={`/panel/documentos/${doc.id}`}
+                            className="folio-table-link mono-text"
+                          >
                             {doc.folio}
                           </Link>
                         </td>
-                        <td>{obtenerNombreTipo(doc)}</td>
-                        <td>{doc.destinatario}</td>
-                        <td>{formatearFechaHora(doc.emitido_en)}</td>
-                        <td>
+                        <td className="cell-destinatario" title={doc.destinatario}>
+                          <span className="destinatario-trunc">{doc.destinatario}</span>
+                        </td>
+                        <td className="cell-nowrap">
+                          <span className="tipo-clave-chip mono-text" title={nombreTipo}>
+                            {claveTipo}
+                          </span>
+                        </td>
+                        <td
+                          className="cell-nowrap mono-fecha"
+                          title={formatearFechaHoraMX(doc.emitido_en)}
+                        >
+                          {formatearFechaCorta(doc.emitido_en)}
+                        </td>
+                        <td className="cell-nowrap mono-fecha">
                           {doc.vigente_hasta
-                            ? formatearFecha(doc.vigente_hasta)
+                            ? formatearFechaCorta(doc.vigente_hasta)
                             : 'Sin vencimiento'}
                         </td>
-                        <td>
-                          <EtiquetaEstado estado={estadoVisual} />
-                        </td>
-                        <td>
-                          <Link
-                            to={`/panel/documentos/${doc.id}`}
-                            className="btn btn-sm btn-secondary"
-                          >
-                            Ver detalle
-                          </Link>
+                        <td className="cell-nowrap">
+                          <LedEstado estado={estadoLed} />
                         </td>
                       </tr>
                     );
@@ -297,70 +483,72 @@ export function DocumentosListaPage() {
                 </tbody>
               </table>
             </div>
-
-            {/* Tarjetas para móvil (< 768 px) */}
-            <div className="mobile-cards-list">
+          ) : (
+            /* F4: Tarjetas compactas en móvil (< 768px) */
+            <div className="mobile-cards-only">
               {documentos.map((doc) => {
-                const estadoVisual = calcularEstadoVisual(doc.estado, doc.vigente_hasta);
+                const estadoLed = resolverEstadoLed(doc);
+                const tipoInfo = Array.isArray(doc.tipos_documento)
+                  ? doc.tipos_documento[0]
+                  : doc.tipos_documento;
+                const claveTipo = tipoInfo?.clave ?? `#${doc.tipo_id}`;
+
                 return (
-                  <article key={doc.id} className="mobile-doc-card">
-                    <div className="mobile-doc-card-top">
-                      <Link
-                        to={`/panel/documentos/${doc.id}`}
-                        className="mono-text mobile-doc-folio"
-                      >
-                        {doc.folio}
-                      </Link>
-                      <EtiquetaEstado estado={estadoVisual} />
+                  <Link
+                    key={doc.id}
+                    to={`/panel/documentos/${doc.id}`}
+                    className="card mobile-doc-card-link"
+                  >
+                    <div className="mobile-doc-row1">
+                      <span className="folio-table-link mono-text">{doc.folio}</span>
+                      <LedEstado estado={estadoLed} />
                     </div>
-                    <p className="mobile-doc-destinatario">{doc.destinatario}</p>
-                    <p className="mobile-doc-meta">
-                      <span>{obtenerNombreTipo(doc)}</span> ·{' '}
-                      <span>Emitido: {formatearFecha(doc.emitido_en)}</span>
+                    <p className="mobile-doc-row2">{doc.destinatario}</p>
+                    <p className="mobile-doc-row3">
+                      <span className="mono-text">{claveTipo}</span>
+                      <span aria-hidden="true"> · </span>
+                      <span>Emitido {formatearFechaCorta(doc.emitido_en)}</span>
+                      <span aria-hidden="true"> · </span>
+                      <span>
+                        {doc.vigente_hasta
+                          ? `Vence ${formatearFechaCorta(doc.vigente_hasta)}`
+                          : 'Sin vencimiento'}
+                      </span>
                     </p>
-                    <div className="mobile-doc-actions">
-                      <Link
-                        to={`/panel/documentos/${doc.id}`}
-                        className="btn btn-sm btn-secondary btn-block"
-                      >
-                        Ver detalle
-                      </Link>
-                    </div>
-                  </article>
+                  </Link>
                 );
               })}
             </div>
+          )}
 
-            <div className="pagination-bar">
-              <span className="pagination-info">
-                Mostrando {pagina * TAMANO_PAGINA + 1}–
-                {Math.min((pagina + 1) * TAMANO_PAGINA, total)} de {total} documentos
-              </span>
-              <div className="pagination-controls">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-secondary"
-                  disabled={pagina === 0}
-                  onClick={() => setPagina((p) => Math.max(0, p - 1))}
-                >
-                  Anterior
-                </button>
-                <span className="pagination-page-indicator">
-                  Página {pagina + 1} de {totalPaginas}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-secondary"
-                  disabled={pagina + 1 >= totalPaginas}
-                  onClick={() => setPagina((p) => p + 1)}
-                >
-                  Siguiente
-                </button>
-              </div>
+          <nav className="pagination-bar" aria-label="Paginación de documentos">
+            <span className="pagination-info">
+              <strong>
+                Página {pagina + 1} de {totalPaginas}
+              </strong>{' '}
+              ({totalRegistros} documentos en total)
+            </span>
+            <div className="pagination-buttons">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={pagina === 0}
+                onClick={() => setPagina((p) => Math.max(0, p - 1))}
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={pagina + 1 >= totalPaginas}
+                onClick={() => setPagina((p) => p + 1)}
+              >
+                Siguiente
+              </button>
             </div>
-          </>
-        )}
-      </section>
+          </nav>
+        </>
+      )}
     </LayoutPanel>
   );
 }

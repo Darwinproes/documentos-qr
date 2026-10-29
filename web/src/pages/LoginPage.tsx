@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ORG_NOMBRE } from '../lib/supabase';
+import { ORG_NOMBRE } from '../lib/config';
 import { useTituloDocumento } from '../lib/useCargaDiferida';
 
 export function LoginPage() {

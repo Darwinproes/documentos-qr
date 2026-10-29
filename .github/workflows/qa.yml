@@ -1,0 +1,46 @@
+name: QA
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+      - name: Revisar y probar Edge Functions
+        run: |
+          deno check supabase/functions/emitir-documento/index.ts supabase/functions/verificar/index.ts
+          deno test --allow-read --allow-write=supabase/tests/salida supabase/tests/aleatorio.test.ts supabase/tests/validacion.test.ts supabase/tests/pdf.test.ts
+      - name: Compilar frontend
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund && npm run build
+      - name: Instalar herramientas QA
+        working-directory: qa
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      # La clave solo protege a los usuarios ficticios del Supabase simulado: se genera en cada corrida.
+      - name: Generar clave del simulado
+        run: echo "QA_CLAVE=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+      - name: Ejecutar QA del panel y auditoría visual
+        run: npm run qa:panel
+        working-directory: qa
+        env:
+          QA_CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+      - name: Guardar reporte y capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-salida
+          path: |
+            qa/salida/reporte.json
+            qa/salida/capturas/
+          if-no-files-found: ignore

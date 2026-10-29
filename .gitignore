@@ -12,3 +12,4 @@ debug.log
 web/capturas-fase3/
 qa/salida/
 qa/node_modules/
+*.bak2

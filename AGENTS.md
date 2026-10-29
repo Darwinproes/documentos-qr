@@ -21,3 +21,4 @@ Proyecto: **Documentos con QR** de PROESA Electrónica. Es un piloto para que ca
 7. **Solo el proyecto Supabase de prueba** `usbacyllkozqrcwbbuok` ("Sesion de prueba"). No toques ningún otro proyecto (en particular `servicios2`). No te conectes a servidores de producción de PROESA.
 8. **Al terminar cada tarea**, marca la casilla en `PROGRESO.md`, escribe en una línea qué hiciste y cómo se prueba.
 9. No agregues dependencias pesadas sin necesidad. Fija versiones exactas.
+10. **Nunca cambies el producto para que pase una prueba.** Nada de rutas, esperas, respuestas falsas ni ramas `if (localhost)` pensadas para Playwright o el simulado. Si una prueba falla por culpa de la prueba o del simulado, se corrigen ellos (`qa/` es de Codex); si no puedes, anótalo en *Preguntas al orquestador*. (Origen: R14–R16, 2026-10-29.)

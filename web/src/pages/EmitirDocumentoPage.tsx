@@ -48,7 +48,7 @@ export function EmitirDocumentoPage() {
         .from('tipos_documento')
         .select('*')
         .eq('activo', true)
-        .order('nombre');
+        .order('id');
 
       const lista = (data || []) as TipoDocumento[];
       setTipos(lista);
@@ -210,8 +210,8 @@ export function EmitirDocumentoPage() {
     <LayoutPanel rolesPermitidos={['emisor', 'admin']}>
       <div className="panel-header-row">
         <div>
-          <h1 className="page-title">Emitir documento oficial</h1>
-          <p className="page-subtitle">
+          <h1 className="panel-page-title">Emitir documento oficial</h1>
+          <p className="panel-page-subtitle">
             Genera un nuevo folio, código de verificación y archivo PDF con código QR.
           </p>
         </div>

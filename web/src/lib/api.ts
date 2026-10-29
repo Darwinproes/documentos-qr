@@ -7,6 +7,7 @@ import {
   SolicitudVerificar
 } from './tipos';
 import {
+  calcularSha256Archivo,
   normalizarCodigo,
   normalizarFolio,
   sumarDiasIso,
@@ -15,16 +16,15 @@ import {
   validarFormatoSha256,
   validarFormatoToken
 } from './formato';
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, supabase } from './supabase';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
+
+export { calcularSha256Archivo };
+export const ErrorClienteVerificacion = ErrorApi;
 
 export function esModoSimulado(): boolean {
   return import.meta.env.VITE_API_SIMULADA === '1';
 }
 
-/**
- * Ejemplos disponibles en modo simulado (VITE_API_SIMULADA=1)
- * para probar cada uno de los 5 resultados del contrato.
- */
 export const EJEMPLOS_SIMULADOS = {
   tokenValido: 'Qm9EjemploTokenValidoDe43CaracteresExactos1',
   tokenVencido: 'Qm9EjemploTokenVencidoDe43CaracteresExacto2',
@@ -135,7 +135,7 @@ function clonarRespuestaSimulada(clave: keyof typeof DOCUMENTOS_SIMULADOS_BASE):
 }
 
 function validarSolicitudVerificarCliente(solicitud: SolicitudVerificar): void {
-  if (solicitud.metodo === 'qr') {
+  if (solicitud.metodo === 'qr' || solicitud.metodo === 'token') {
     if (!validarFormatoToken(solicitud.token)) {
       throw new ErrorApi('VALIDACION', 'El formato del token de verificación no es válido.', 400);
     }
@@ -163,9 +163,9 @@ function validarSolicitudVerificarCliente(solicitud: SolicitudVerificar): void {
 
 async function verificarSimulado(solicitud: SolicitudVerificar): Promise<RespuestaVerificacion> {
   validarSolicitudVerificarCliente(solicitud);
-  await new Promise((resolve) => setTimeout(resolve, 280));
+  await new Promise((resolve) => setTimeout(resolve, 180));
 
-  if (solicitud.metodo === 'qr') {
+  if (solicitud.metodo === 'qr' || solicitud.metodo === 'token') {
     const emitido = emitidosEnSesionSimulada.find((item) => item.token === solicitud.token);
     if (emitido) {
       return {
@@ -242,6 +242,9 @@ async function verificarSimulado(solicitud: SolicitudVerificar): Promise<Respues
     return clonarRespuestaSimulada('no_encontrado');
   }
 
+  if (solicitud.metodo !== 'archivo') {
+    return clonarRespuestaSimulada('no_encontrado');
+  }
   const hash = solicitud.pdf_sha256.trim().toLowerCase();
   const emitidoPorHash = emitidosEnSesionSimulada.find(
     (item) => item.respuestaEmision.pdf_sha256 === hash
@@ -292,7 +295,7 @@ function generarSha256HexSimulado(): string {
 async function emitirDocumentoSimulado(
   solicitud: SolicitudEmitirDocumento
 ): Promise<RespuestaEmitirDocumento> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 250));
 
   const destinatario = solicitud.destinatario.trim();
   if (!destinatario) {
@@ -357,6 +360,7 @@ async function emitirDocumentoSimulado(
 
 /**
  * Llama a POST /functions/v1/verificar según el contrato.
+ * No importa el cliente de Supabase para mantener ligero el chunk público (R9/F14).
  */
 export async function verificar(solicitud: SolicitudVerificar): Promise<RespuestaVerificacion> {
   validarSolicitudVerificarCliente(solicitud);
@@ -365,19 +369,22 @@ export async function verificar(solicitud: SolicitudVerificar): Promise<Respuest
     return verificarSimulado(solicitud);
   }
 
-  const cuerpo: SolicitudVerificar =
+  const cuerpo =
     solicitud.metodo === 'manual'
       ? {
-          metodo: 'manual',
+          metodo: 'manual' as const,
           folio: normalizarFolio(solicitud.folio),
           codigo: normalizarCodigo(solicitud.codigo)
         }
       : solicitud.metodo === 'archivo'
         ? {
-            metodo: 'archivo',
+            metodo: 'archivo' as const,
             pdf_sha256: solicitud.pdf_sha256.trim().toLowerCase()
           }
-        : solicitud;
+        : {
+            metodo: 'qr' as const,
+            token: solicitud.token
+          };
 
   let response: Response;
   try {
@@ -417,8 +424,11 @@ export async function verificar(solicitud: SolicitudVerificar): Promise<Respuest
   return json as RespuestaVerificacion;
 }
 
+export const verificarDocumento = verificar;
+
 /**
  * Llama a POST /functions/v1/emitir-documento según el contrato.
+ * Importa dinámicamente el cliente de Supabase solo cuando se usa en el panel (R9/F14).
  */
 export async function emitirDocumento(
   solicitud: SolicitudEmitirDocumento
@@ -427,6 +437,7 @@ export async function emitirDocumento(
     return emitirDocumentoSimulado(solicitud);
   }
 
+  const { supabase } = await import('./supabase');
   const {
     data: { session }
   } = await supabase.auth.getSession();

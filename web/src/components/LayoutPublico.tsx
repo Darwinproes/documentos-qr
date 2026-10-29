@@ -1,49 +1,50 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { DOMINIO_OFICIAL, ORG_NOMBRE } from '../lib/supabase';
-import { formatearFechaHora } from '../lib/formato';
-import { esModoSimulado } from '../lib/api';
+import { CONTACTO_REPORTE, ORG_NOMBRE } from '../lib/config';
 
 interface LayoutPublicoProps {
   children: React.ReactNode;
-  verificadoEn?: string | null;
 }
 
-export function LayoutPublico({ children, verificadoEn }: LayoutPublicoProps) {
-  const fechaConsulta = formatearFechaHora(verificadoEn || new Date().toISOString());
-
+export function LayoutPublico({ children }: LayoutPublicoProps) {
   return (
     <div className="public-shell">
+      <a href="#contenido-principal" className="skip-link">
+        Saltar al contenido principal
+      </a>
+
       <header className="public-header">
-        <div className="public-header-inner">
-          <Link to="/verificar" className="brand-link" aria-label={`Inicio de verificación — ${ORG_NOMBRE}`}>
+        <div className="container public-header-inner">
+          <Link
+            to="/verificar"
+            className="brand-link"
+            aria-label={`${ORG_NOMBRE} — Ir a verificación de documentos`}
+          >
             <img src="/logo.svg" alt={ORG_NOMBRE} className="brand-logo" />
           </Link>
-          <div className="public-header-actions">
-            {esModoSimulado() && (
-              <span className="badge badge-simulado" title="VITE_API_SIMULADA=1 activo">
-                Modo simulado
-              </span>
-            )}
-            <Link to="/verificar" className="link-subtle">
+          <nav aria-label="Navegación pública" className="public-nav">
+            <Link to="/verificar" className="nav-link-public">
               Verificar documento
             </Link>
-            <Link to="/panel/login" className="link-subtle">
-              Acceso interno
-            </Link>
-          </div>
+          </nav>
         </div>
       </header>
 
-      <main className="public-main">{children}</main>
+      <main id="contenido-principal" className="public-main" tabIndex={-1}>
+        <div className="container">{children}</div>
+      </main>
 
-      <footer className="public-footer" role="contentinfo">
-        <div className="public-footer-inner">
-          <p className="footer-domain-notice">
-            Página oficial de verificación de {ORG_NOMBRE}. Verifique que la dirección en su
-            navegador sea <strong>{DOMINIO_OFICIAL}</strong>.
-          </p>
-          <p className="footer-timestamp">Consultado el {fechaConsulta}</p>
+      <footer className="public-footer">
+        <div className="container public-footer-inner">
+          <span className="footer-copy">© {ORG_NOMBRE}</span>
+          <div className="footer-links">
+            <a href={`mailto:${CONTACTO_REPORTE}`} className="footer-link">
+              Contacto: {CONTACTO_REPORTE}
+            </a>
+            <Link to="/panel/login" className="footer-link">
+              Acceso interno
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

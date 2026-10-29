@@ -4,6 +4,9 @@ const REGEX_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const REGEX_FOLIO = /^[A-Za-z0-9]{2,10}-\d{4}-\d{6}$/;
 const REGEX_SHA256 = /^[0-9a-f]{64}$/i;
 
+export const PATRON_FOLIO = REGEX_FOLIO;
+export const PATRON_CODIGO_LIMPIO = /^[0-9A-HJ-NP-TV-Z]{10}$/;
+
 export function validarFormatoToken(token: string): boolean {
   return REGEX_TOKEN.test(token);
 }
@@ -24,11 +27,15 @@ export function normalizarCodigo(codigo: string): string {
     .replace(/[^0-9A-Z]/g, '');
 }
 
+export const limpiarCodigoVerificacion = normalizarCodigo;
+
 export function formatearCodigoVisual(codigo: string): string {
   const limpio = normalizarCodigo(codigo).slice(0, 10);
   if (limpio.length <= 5) return limpio;
   return `${limpio.slice(0, 5)}-${limpio.slice(5, 10)}`;
 }
+
+export const normalizarCodigoConGuion = formatearCodigoVisual;
 
 export function validarFormatoFolio(folio: string): boolean {
   return REGEX_FOLIO.test(normalizarFolio(folio));
@@ -40,6 +47,16 @@ export function validarFormatoCodigo(codigo: string): boolean {
 
 export function validarFormatoSha256(hash: string): boolean {
   return REGEX_SHA256.test(hash.trim());
+}
+
+/**
+ * Abrevia una huella SHA-256 como 5fec…f38b (F5).
+ */
+export function abreviarSha256(hash: string | null | undefined): string {
+  if (!hash) return '—';
+  const limpio = hash.trim();
+  if (limpio.length <= 12) return limpio;
+  return `${limpio.slice(0, 4)}…${limpio.slice(-4)}`;
 }
 
 /**
@@ -59,6 +76,8 @@ export function formatearFecha(iso: string | null | undefined): string {
   const anio = fecha.getFullYear();
   return `${dia}/${mes}/${anio}`;
 }
+
+export const formatearFechaCorta = formatearFecha;
 
 /**
  * Formatea un timestamp ISO como dd/mm/aaaa hh:mm en hora de México.
@@ -92,6 +111,8 @@ export function formatearFechaHora(iso: string | null | undefined): string {
   }
 }
 
+export const formatearFechaHoraMX = formatearFechaHora;
+
 /**
  * Obtiene la fecha de hoy en America/Mexico_City en formato AAAA-MM-DD.
  */
@@ -113,11 +134,18 @@ export function hoyLocalIso(): string {
   }
 }
 
+export const hoyIsoLocal = hoyLocalIso;
+
 export function sumarDiasIso(dias: number): string {
   const hoy = hoyLocalIso();
   const [y, m, d] = hoy.split('-').map(Number);
   const fecha = new Date(Date.UTC(y, m - 1, d + dias));
   return fecha.toISOString().slice(0, 10);
+}
+
+export function esFechaVencida(vigenteHasta: string | null | undefined): boolean {
+  if (!vigenteHasta) return false;
+  return vigenteHasta.slice(0, 10) < hoyLocalIso();
 }
 
 /**
@@ -129,10 +157,31 @@ export function calcularEstadoVisual(
 ): EstadoVisualDocumento {
   if (estado === 'cancelado') return 'cancelado';
   if (estado === 'pendiente') return 'pendiente';
-  if (vigenteHasta && vigenteHasta.slice(0, 10) < hoyLocalIso()) {
+  if (esFechaVencida(vigenteHasta)) {
     return 'vencido';
   }
   return 'vigente';
+}
+
+export function esPorVencer30Dias(
+  fechaOEstado: string | null | undefined,
+  vigenteHastaOpcional?: string | null | undefined
+): boolean {
+  const fechaIso = vigenteHastaOpcional !== undefined ? vigenteHastaOpcional : fechaOEstado;
+  if (vigenteHastaOpcional !== undefined && fechaOEstado !== 'vigente') return false;
+  if (!fechaIso) return false;
+  const f = fechaIso.slice(0, 10);
+  const hoy = hoyLocalIso();
+  const limite = sumarDiasIso(30);
+  return f >= hoy && f <= limite;
+}
+
+export function formatearTamanoBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(2)} MB`;
 }
 
 /**

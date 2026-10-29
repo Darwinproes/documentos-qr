@@ -1,10 +1,12 @@
 export type RolDocumentos = 'admin' | 'emisor' | 'consulta';
+export type RolUsuario = RolDocumentos;
 
 export type EstadoDocumento = 'pendiente' | 'vigente' | 'cancelado';
 
 export type EstadoVisualDocumento = 'pendiente' | 'vigente' | 'vencido' | 'cancelado';
 
 export type TipoCampo = 'texto' | 'texto_largo' | 'fecha' | 'numero';
+export type TipoCampoEsquema = TipoCampo;
 
 export interface DefinicionCampo {
   clave: string;
@@ -13,6 +15,7 @@ export interface DefinicionCampo {
   requerido: boolean;
   publico: boolean;
 }
+export type CampoEsquema = DefinicionCampo;
 
 export interface CampoVerificado {
   etiqueta: string;
@@ -27,7 +30,7 @@ export type ResultadoVerificacion =
   | 'no_encontrado'
   | 'limite_excedido';
 
-export type MetodoVerificacion = 'qr' | 'manual' | 'archivo';
+export type MetodoVerificacion = 'qr' | 'token' | 'manual' | 'archivo';
 
 export interface DocumentoVerificado {
   folio: string;
@@ -47,7 +50,7 @@ export interface RespuestaVerificacion {
 }
 
 export type SolicitudVerificar =
-  | { metodo: 'qr'; token: string }
+  | { metodo: 'qr' | 'token'; token: string }
   | { metodo: 'manual'; folio: string; codigo: string }
   | { metodo: 'archivo'; pdf_sha256: string };
 
@@ -99,7 +102,7 @@ export class ErrorApi extends Error {
 export interface Perfil {
   id: string;
   nombre: string;
-  area: string;
+  area: string | null;
   rol: RolDocumentos;
   activo: boolean;
   creado_en?: string;
@@ -109,12 +112,18 @@ export interface TipoDocumento {
   id: number;
   clave: string;
   nombre: string;
-  descripcion: string;
+  descripcion: string | null;
   prefijo_folio: string;
   vigencia_dias: number | null;
   campos: DefinicionCampo[];
   activo: boolean;
   creado_en?: string;
+}
+
+export interface TipoDocumentoRelacion {
+  clave: string;
+  nombre: string;
+  campos?: DefinicionCampo[];
 }
 
 export interface DocumentoResumen {
@@ -125,7 +134,7 @@ export interface DocumentoResumen {
   emitido_en: string;
   vigente_hasta: string | null;
   tipo_id: number;
-  tipos_documento: { clave: string; nombre: string } | { clave: string; nombre: string }[] | null;
+  tipos_documento: TipoDocumentoRelacion | TipoDocumentoRelacion[] | null;
 }
 
 export interface DocumentoDetalle extends DocumentoResumen {
@@ -138,12 +147,23 @@ export interface DocumentoDetalle extends DocumentoResumen {
   cancelado_en: string | null;
   motivo_cancelacion: string | null;
 }
+export type DocumentoPanel = DocumentoDetalle;
+
+export interface ResumenDocumentos {
+  vigentes: number;
+  por_vencer: number;
+  vencidos: number;
+  cancelados: number;
+  total: number;
+}
 
 export interface RegistroBitacora {
   id: number;
-  documento_id: string;
-  accion: 'emitido' | 'pdf_generado' | 'cancelado';
-  actor: string | null;
+  documento_id?: string;
+  accion: 'emitido' | 'pdf_generado' | 'cancelado' | 'reserva_folio' | string;
+  actor?: string | null;
+  actor_nombre?: string | null;
+  actor_area?: string | null;
   detalle: Record<string, unknown>;
   creado_en: string;
 }
