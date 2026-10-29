@@ -14,12 +14,13 @@ export interface CredencialFirma {
 // Sin FIRMA_P12_BASE64 el PDF sale sin firma (pruebas locales). Si el secreto existe y la firma
 // falla, la emisión falla: nunca se entrega en silencio un documento sin firmar.
 export function cargarCredencialFirma(): CredencialFirma | null {
-  const base64 = Deno.env.get("FIRMA_P12_BASE64")?.trim();
+  // Los secretos se pegan desde archivos de texto: se descartan espacios y saltos de línea copiados de más.
+  const base64 = Deno.env.get("FIRMA_P12_BASE64")?.replace(/\s+/g, "");
   if (!base64) return null;
   const binario = atob(base64);
   const p12 = new Uint8Array(binario.length);
   for (let i = 0; i < binario.length; i++) p12[i] = binario.charCodeAt(i);
-  return { p12, clave: Deno.env.get("FIRMA_P12_CLAVE") ?? "" };
+  return { p12, clave: (Deno.env.get("FIRMA_P12_CLAVE") ?? "").trim() };
 }
 
 export function agregarEspacioFirma(pdf: PDFDocument, orgNombre: string, dominioOficial: string) {
