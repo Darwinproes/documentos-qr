@@ -4,6 +4,13 @@ export const CODIGO_RE = /^[0-9A-Z]{10}$/;
 export const SHA256_RE = /^[a-fA-F0-9]{64}$/;
 const FECHA_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 export const MAX_BODY_BYTES = 32 * 1024;
+export type AccionVerificacion = "verificar" | "descargar";
+
+export function validarAccionVerificacion(value: unknown): AccionVerificacion | null {
+  if (value === undefined || value === "verificar") return "verificar";
+  if (value === "descargar") return "descargar";
+  return null;
+}
 
 export function fechaValida(value: unknown): value is string {
   if (typeof value !== "string") return false;

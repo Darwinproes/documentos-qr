@@ -133,6 +133,43 @@ test('emblema y resultado público identifican al destinatario sin canvas', asyn
   assert.equal(await page.locator('canvas').count(), 0);
 });
 
+test('resultado QR vigente permite descargar el PDF original', async (browser) => {
+  const page = await browser.newPage();
+  await page.goto(`${baseUrl}/v/Qm9EjemploTokenValidoDe43CaracteresExactos1`);
+  const button = page.getByRole('button', { name: /descargar pdf original/i });
+  await button.waitFor();
+  const signedPath = /\/storage\/v1\/object\/sign\/documentos\//;
+  const outcomes = Promise.any([
+    page.waitForEvent('download', { timeout: 8000 }).then((download) => ({ kind: 'download', name: download.suggestedFilename() })),
+    page.waitForURL(signedPath, { timeout: 8000 }).then(() => ({ kind: 'navigation', url: page.url() })),
+    page.context().waitForEvent('page', { timeout: 8000 }).then(async (opened) => {
+      await opened.waitForURL(signedPath, { timeout: 8000 });
+      return { kind: 'page', url: opened.url() };
+    }),
+  ]).catch(() => null);
+  await button.click();
+  const outcome = await outcomes;
+  assert.ok(outcome, 'El botón debe iniciar una descarga o abrir la URL firmada');
+  if (outcome.kind === 'download') assert.equal(outcome.name, 'CONST-2026-000001.pdf');
+  else assert.match(outcome.url, signedPath);
+});
+
+test('resultados vencido y cancelado no ofrecen descarga', async (browser) => {
+  for (const caso of [
+    { folio: 'CONST-2026-000005', estado: /documento vencido/i },
+    { folio: 'CONST-2026-000009', estado: /documento cancelado/i },
+  ]) {
+    const page = await browser.newPage();
+    await page.goto(`${baseUrl}/verificar`);
+    await page.getByRole('textbox', { name: /folio del documento/i }).fill(caso.folio);
+    await page.getByRole('textbox', { name: /código de verificación/i }).fill('7KQ2M-XA9PD');
+    await page.getByRole('button', { name: /verificar documento/i }).click();
+    await page.getByRole('heading', { name: caso.estado }).waitFor();
+    assert.equal(await page.getByRole('button', { name: /descargar pdf original/i }).count(), 0);
+    await page.close();
+  }
+});
+
 test('admin busca, filtra y pagina documentos', async (browser) => {
   const page = await adminPage(browser);
   const search = page.getByRole('searchbox', { name: /buscar por folio o destinatario/i });

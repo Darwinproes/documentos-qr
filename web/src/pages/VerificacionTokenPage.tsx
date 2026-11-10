@@ -120,7 +120,11 @@ export function VerificacionTokenPage() {
         )}
 
         {!cargando && respuesta && (
-          <ResultadoVerificacionVista respuesta={respuesta} metodo="token" />
+          <ResultadoVerificacionVista
+            respuesta={respuesta}
+            metodo="token"
+            solicitudDescarga={{ metodo: 'qr', token }}
+          />
         )}
       </div>
     </LayoutPublico>

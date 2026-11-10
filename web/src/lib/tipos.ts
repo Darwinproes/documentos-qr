@@ -51,6 +51,21 @@ export type SolicitudVerificar =
   | { metodo: 'manual'; folio: string; codigo: string }
   | { metodo: 'archivo'; pdf_sha256: string };
 
+export interface DescargaPdf {
+  url: string;
+  nombre_archivo: string;
+  expira_en: string;
+}
+
+export interface RespuestaDescargaOriginal {
+  resultado: ResultadoVerificacion;
+  descarga: DescargaPdf | null;
+}
+
+export type SolicitudDescargarOriginal =
+  | { metodo: 'qr' | 'token'; token: string }
+  | { metodo: 'manual'; folio: string; codigo: string };
+
 export interface SolicitudEmitirDocumento {
   tipo_clave: string;
   destinatario: string;

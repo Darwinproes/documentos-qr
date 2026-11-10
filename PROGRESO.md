@@ -240,6 +240,27 @@ Origen: el usuario pidió una revisión completa del código buscando mejoras de
 - [ ] O16 — Cuando lleguen formatos reales: migración con índices `documentos (emitido_en desc)`, `(estado, vigente_hasta)` y `pg_trgm` para la búsqueda por folio/destinatario
 - [x] O17 — Revisión de E1–E8 y R1–R5 — 2026-11-10 (ver *Revisión del orquestador*). Falta publicar, con aprobación del usuario.
 
+## Fase 6 — Descarga del PDF original (2026-11-10)
+
+Origen: el usuario pidió que quien abre el documento desde el QR pueda descargar el PDF. Resuelve la opción B de la brecha del QR (quien verifica obtiene el original firmado para compararlo); **no** detecta por sí sola que una copia fue alterada. Decisiones del usuario: **solo documentos vigentes** y **solo con QR o folio + código**. Contrato: `docs/02-contrato-api.md` §2.1.
+
+### Orquestador
+
+- [x] O18 — Migración `20261110000001_descarga_pdf_original.sql`: columna `verificaciones.accion` y RPC `ruta_pdf_descarga` (solo `service_role`; devuelve `pdf_path` únicamente con `valido`). Probada en una transacción revertida sobre el proyecto: QR inexistente → `no_encontrado`, vigente → ruta, vencido → sin ruta, 4 registros con `accion = 'descargar'`, `anon` sin permiso. **No aplicada todavía.**
+- [ ] O19 — Revisar DS1–DS3 y DW1–DW3; aplicar la migración, desplegar `verificar` y publicar, con aprobación del usuario.
+
+### Codex (`tareas/CODEX-FASE6.md`)
+
+- [x] DS1 — `accion: "descargar"` en `verificar` con URL firmada de 2 minutos — 2026-11-10 (Codex; validado por el orquestador): `deno check` OK; sin `accion` la respuesta no cambia.
+- [x] DS2 — Pruebas del manejador (acción desconocida, archivo + descargar, token inválido) — 2026-11-10: `deno test` 15/15.
+- [x] DS3 — Simulado y pruebas de QA del botón — 2026-11-10: `qa:panel` 27/27. El orquestador corrigió el simulado: comparaba el código con guion (`7KQ2M-XA9PD`) y la página lo manda normalizado (`7KQ2MXA9PD`), como pide el contrato.
+
+### Antigravity (`tareas/ANTIGRAVITY-FASE6.md`)
+
+- [x] DW1 — `descargarOriginal` en `lib/api.ts` y en el modo simulado — 2026-11-10: Tipos `DescargaPdf`, `RespuestaDescargaOriginal` y `SolicitudDescargarOriginal` en `tipos.ts`, `descargarOriginal` en `api.ts`, `descargarOriginalSimulado` en `api-simulada.ts` y copia de `ejemplo-documento.pdf` en `web/public/`; probar con `cd web && npm run build`.
+- [x] DW2 — Botón «Descargar PDF original» en el resultado válido (QR y folio + código), con estados de carga y error — 2026-11-10: Componente `DescargaOriginal.tsx` integrado en `ResultadoVerificacionVista.tsx` desde `VerificacionTokenPage.tsx` y `VerificarPage.tsx` (sin poner folio/código en URL), con estados de carga, vigencia vencida/cancelada, límite y error; probar en `/v/Qm9EjemploTokenValidoDe43CaracteresExactos1`.
+- [x] DW3 — Sin botón en vencido, cancelado, no encontrado, límite y verificación por archivo — 2026-11-10: `mostrarDescargaOriginal` exige `resultado === 'valido'` y método `'qr' | 'token' | 'manual'`; comprobado que no aparece en `vencido`, `cancelado`, `no_encontrado`, `limite_excedido` ni en verificación por archivo.
+
 ## Pendientes del responsable (usuario)
 
 - [x] Regla Rewrite en Render (`/*` → `/index.html`) — 2026-10-28; V1 confirmado: QR escaneado desde iPhone → `valido` para CONST-2026-000001.
@@ -250,6 +271,15 @@ Origen: el usuario pidió una revisión completa del código buscando mejoras de
 - [ ] Para producción: subdominio propio (ej. `verifica.proesaelectronica.com`).
 
 ## Revisión del orquestador
+
+### Fase 6 — Descarga del PDF original — 2026-11-10 12:50
+
+Resultado: **aprobado, pendiente de publicar** (con permiso del usuario).
+
+- Codex (DS1–DS3): `deno check` OK, `deno test` 15/15; el orquestador corrigió en el simulado la comparación del código manual (con guion vs. normalizado).
+- Antigravity (DW1–DW3): sin código para pruebas (regla 10) y anotó la falla del simulado en lugar de cambiar el producto. Botón de 44 px, a todo lo ancho en 360 px, sin desplazamiento horizontal; con folio y código la URL sigue siendo `/verificar` (no expone folio ni código). El bundle público sigue sin supabase-js.
+- `qa:panel` 27/27 y auditoría sin problemas.
+- Orden para publicar: 1) aplicar la migración, 2) desplegar `verificar` (antes del sitio, para que el botón no llame a una acción que el servidor aún no conoce), 3) commit y push.
 
 ### Antigravity Fase 5 (E1–E8) — 2026-11-10 12:00
 
@@ -351,3 +381,7 @@ _(Los agentes escriben aquí: fecha, agente, pregunta, qué opción eligieron mi
 - **2026-11-10 — Codex:** `npm run qa:panel` no pudo iniciar la suite porque el build actual de `web/` falla con exports ausentes (`RolUsuario`, `DocumentoPanel`, `formatearFechaCorta`, entre otros) tras cambios de estructura de Fase 5. Se dejó el producto intacto según la regla 10; resolver los exports en Antigravity y volver a ejecutar QA. La sintaxis de los cinco módulos JS de QA sí pasó con `node --check`.
 
 - **2026-11-10 — Codex (Fase 5):** implementación R1–R5 lista. `node --check` pasó para los scripts QA; JSON de `deno.json`/`deno.lock` válido y `rg 'from "npm:' supabase` sin resultados. No se pudo correr Deno (no está instalado) ni `npm run qa:panel` (el build de `web/` falla con exports faltantes de Fase 5 Antigravity). Pendiente validar antes de marcar R1–R5 completos.
+
+- **2026-11-10 — Codex (Fase 6):** Deno no está instalado localmente; las pruebas nuevas no se pudieron ejecutar. `npm run qa:panel` inicia el build y se detiene en `web/src/pages/VerificarPage.tsx` con TS6133 por `credencialesManual` sin uso (DW1 de Antigravity en curso). No se cambió `web/`; volver a correr Deno y QA al terminar DW1.
+
+- **2026-11-10 — Antigravity (Fase 6):** `npm run build` compila sin errores y en `npm run qa:panel` pasan 23/24 casos (incluido `resultado QR vigente permite descargar el PDF original`). El caso `resultados vencido y cancelado no ofrecen descarga` en `qa/e2e/panel.mjs` falla porque `qa/mock-supabase.mjs:252` compara `body.codigo === '7KQ2M-XA9PD'` con guion, mientras que el contrato (`docs/02-contrato-api.md` §2: «`codigo`: 10 caracteres alfanuméricos tras quitar guiones y espacios») y `api.ts` envían `7KQ2MXA9PD` normalizado sin guion, por lo que el simulado devuelve `no_encontrado` en vez de `vencido`/`cancelado`. Se mantuvo el producto fiel al contrato (reglas 3 y 10) para que se normalice `body.codigo` en `qa/mock-supabase.mjs:252`.

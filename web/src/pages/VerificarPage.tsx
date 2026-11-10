@@ -27,6 +27,10 @@ export function VerificarPage() {
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [respuesta, setRespuesta] = useState<RespuestaVerificacion | null>(null);
   const [metodoUsado, setMetodoUsado] = useState<MetodoVerificacion>('manual');
+  const [credencialesManual, setCredencialesManual] = useState<{
+    folio: string;
+    codigo: string;
+  } | null>(null);
 
   const tabManualRef = useRef<HTMLButtonElement>(null);
   const tabArchivoRef = useRef<HTMLButtonElement>(null);
@@ -58,6 +62,7 @@ export function VerificarPage() {
     setCargando(true);
     setRespuesta(null);
     setMetodoUsado('manual');
+    setCredencialesManual({ folio: folioLimpio, codigo: codigoLimpio });
     try {
       setRespuesta(
         await verificar({
@@ -81,6 +86,7 @@ export function VerificarPage() {
     setErrorGeneral(null);
     setErrorArchivo(undefined);
     setRespuesta(null);
+    setCredencialesManual(null);
     setArchivoInfo({ nombre: archivo.name, tamano: archivo.size });
     setCargando(true);
     setMetodoUsado('archivo');
@@ -186,9 +192,19 @@ export function VerificarPage() {
           <ResultadoVerificacionVista
             respuesta={respuesta}
             metodo={metodoUsado}
+            solicitudDescarga={
+              metodoUsado === 'manual' && credencialesManual
+                ? {
+                    metodo: 'manual',
+                    folio: credencialesManual.folio,
+                    codigo: credencialesManual.codigo
+                  }
+                : undefined
+            }
             onVerificarOtro={() => {
               setRespuesta(null);
               setErrorGeneral(null);
+              setCredencialesManual(null);
             }}
           />
         )}

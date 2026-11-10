@@ -129,6 +129,38 @@ Respuesta `200` (o `429` cuando `resultado = "limite_excedido"`, con el mismo cu
 - Con `no_encontrado` y `limite_excedido`, `documento` es `null`.
 - Un documento `pendiente` responde `no_encontrado`.
 
+### 2.1 Descarga del PDF original (`accion: "descargar"`)
+
+Decisión del usuario (2026-11-10): se ofrece **solo para documentos vigentes** y **solo con `qr` o `manual`** (quien tiene el documento en la mano). Con `archivo` no aplica.
+
+Mismo endpoint, con `accion` (opcional; si falta vale `"verificar"` y la respuesta es la de arriba, sin cambios):
+
+```json
+{ "metodo": "qr", "token": "Qm9…", "accion": "descargar" }
+{ "metodo": "manual", "folio": "CONST-2026-000001", "codigo": "7KQ2M-XA9PD", "accion": "descargar" }
+```
+
+Validación previa (si falla → 400 `VALIDACION`): la misma de cada método; `accion` ∈ `verificar` | `descargar`; `metodo: "archivo"` con `accion: "descargar"` → «La descarga solo está disponible con el QR o con folio y código».
+
+La función llama a `rpc('ruta_pdf_descarga', { p_metodo, p_token, p_folio, p_codigo, p_ip_hash, p_user_agent })` con `service_role` (migración `20261110000001_descarga_pdf_original.sql`). La RPC vuelve a verificar, registra la consulta en `verificaciones` con `accion = 'descargar'` (cuenta para el límite de 20 por minuto) y solo devuelve `pdf_path` y `folio` si el resultado es `valido`. Con `valido`, la función crea `storage.from('documentos').createSignedUrl(pdf_path, 120, { download: '<folio>.pdf' })`.
+
+Respuesta `200` (`429` con `limite_excedido`, mismo cuerpo):
+
+```json
+{
+  "resultado": "valido",
+  "descarga": {
+    "url": "https://usbacyllkozqrcwbbuok.supabase.co/storage/v1/object/sign/documentos/…&download=CONST-2026-000001.pdf",
+    "nombre_archivo": "CONST-2026-000001.pdf",
+    "expira_en": "2026-11-10T18:02:00.000Z"
+  }
+}
+```
+
+- Con `vencido`, `cancelado`, `no_encontrado` o `limite_excedido`: `"descarga": null`. Nunca se entrega el PDF de un documento que no está vigente.
+- Si la URL firmada no se puede crear → 500 `INTERNO`.
+- La URL dura **2 minutos** y no se guarda; cada clic en «Descargar» pide una nueva.
+
 ---
 
 ## 3. Acceso directo desde el panel (supabase-js con la sesión del usuario)

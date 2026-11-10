@@ -222,7 +222,8 @@ const server = createServer(async (req, res) => {
     return json(res, 200, { signedURL, signedUrl: `http://${req.headers.host}${signedURL}`, path: url.pathname.split('/').slice(6).join('/') });
   }
   if (url.pathname.startsWith('/storage/v1/object/sign/documentos/') && req.method === 'GET') {
-    res.writeHead(200, { ...CORS, 'content-type': 'application/pdf', 'content-length': minimalPdf.length }); return res.end(minimalPdf);
+    const download = url.searchParams.get('download')?.replace(/["\\\r\n]/g, '');
+    res.writeHead(200, { ...CORS, 'content-type': 'application/pdf', 'content-length': minimalPdf.length, ...(download ? { 'content-disposition': `attachment; filename="${download}"` } : {}) }); return res.end(minimalPdf);
   }
 
   if (url.pathname === '/functions/v1/emitir-documento' && req.method === 'POST') {
@@ -248,11 +249,42 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/functions/v1/verificar' && req.method === 'POST') {
     const body = await readBody(req);
     let found = null;
-    if (body.metodo === 'manual') found = docs.find((doc) => doc.folio === String(body.folio).toUpperCase() && body.codigo === '7KQ2M-XA9PD');
+    if (body.metodo === 'manual') found = docs.find((doc) => doc.folio === String(body.folio).toUpperCase() && String(body.codigo).toUpperCase().replace(/[^0-9A-Z]/g, '') === '7KQ2MXA9PD');
     if (body.metodo === 'archivo') found = docs.find((doc) => doc.pdf_sha256 === body.pdf_sha256);
     if (body.metodo === 'qr' && body.token === 'Qm9EjemploTokenValidoDe43CaracteresExactos1') found = docs.find((doc) => doc.folio === 'CONST-2026-000001');
-    const result = found && found.estado !== 'pendiente' ? 'valido' : 'no_encontrado';
-    return json(res, 200, { resultado: result, documento: result === 'valido' ? { folio: found.folio, tipo: typeRows.find((t) => t.id === found.tipo_id)?.nombre, destinatario: found.destinatario, area_emisora: 'Recursos Humanos', emitido_en: found.emitido_en, vigente_hasta: found.vigente_hasta, cancelado_en: found.cancelado_en, campos: [] } : null, verificado_en: new Date().toISOString() });
+    const hoy = isoDays(0);
+    const result = !found || found.estado === 'pendiente'
+      ? 'no_encontrado'
+      : found.estado === 'cancelado'
+      ? 'cancelado'
+      : found.vigente_hasta && found.vigente_hasta < hoy
+      ? 'vencido'
+      : 'valido';
+    if (body.accion === 'descargar') {
+      const puedeDescargar = result === 'valido' && found?.estado === 'vigente' && (!found.vigente_hasta || found.vigente_hasta >= hoy);
+      const ruta = puedeDescargar
+        ? `/storage/v1/object/sign/documentos/${found.pdf_path}?token=qa-signed-download&download=${encodeURIComponent(`${found.folio}.pdf`)}`
+        : null;
+      return json(res, 200, {
+        resultado: result,
+        descarga: ruta ? {
+          url: new URL(ruta, `http://${req.headers.host}`).toString(),
+          nombre_archivo: `${found.folio}.pdf`,
+          expira_en: new Date(Date.now() + 120_000).toISOString(),
+        } : null,
+      });
+    }
+    const documento = ['valido', 'vencido', 'cancelado'].includes(result) ? {
+      folio: found.folio,
+      tipo: typeRows.find((t) => t.id === found.tipo_id)?.nombre,
+      destinatario: found.destinatario,
+      area_emisora: 'Recursos Humanos',
+      emitido_en: found.emitido_en,
+      vigente_hasta: found.vigente_hasta,
+      cancelado_en: found.cancelado_en,
+      campos: [],
+    } : null;
+    return json(res, 200, { resultado: result, documento, verificado_en: new Date().toISOString() });
   }
 
   if (url.pathname.startsWith('/rest/v1/rpc/')) {

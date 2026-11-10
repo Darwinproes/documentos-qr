@@ -9,8 +9,10 @@ import {
 } from './formato';
 import {
   ErrorApi,
+  RespuestaDescargaOriginal,
   RespuestaEmitirDocumento,
   RespuestaVerificacion,
+  SolicitudDescargarOriginal,
   SolicitudEmitirDocumento,
   SolicitudVerificar
 } from './tipos';
@@ -266,6 +268,27 @@ export async function verificarSimulado(
     return clonarRespuestaSimulada('valido');
   }
   return clonarRespuestaSimulada('no_encontrado');
+}
+
+export async function descargarOriginalSimulado(
+  entrada: SolicitudDescargarOriginal
+): Promise<RespuestaDescargaOriginal> {
+  const verificacion = await verificarSimulado(entrada);
+  if (verificacion.resultado === 'valido' && verificacion.documento) {
+    const expiraEn = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+    return {
+      resultado: 'valido',
+      descarga: {
+        url: '/ejemplo-documento.pdf',
+        nombre_archivo: `${verificacion.documento.folio}.pdf`,
+        expira_en: expiraEn
+      }
+    };
+  }
+  return {
+    resultado: verificacion.resultado,
+    descarga: null
+  };
 }
 
 function generarTokenAleatorio43(): string {

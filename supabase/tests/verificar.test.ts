@@ -45,3 +45,26 @@ Deno.test("manejador verificar responde CORS solo al origen permitido", async ()
     throw new Error("El preflight no permitido anunció Access-Control-Allow-Origin");
   }
 });
+
+Deno.test("manejador verificar valida acción y métodos disponibles para descargar", async () => {
+  const accionInvalida = await error(await manejarVerificacion(post(JSON.stringify({
+    metodo: "qr", token: "Qm9EjemploTokenValidoDe43CaracteresExactos1", accion: "borrar",
+  }))), 400);
+  if (accionInvalida.error.mensaje !== "La acción de verificación no es válida") {
+    throw new Error("Mensaje inesperado para acción no permitida");
+  }
+
+  const archivo = await error(await manejarVerificacion(post(JSON.stringify({
+    metodo: "archivo", pdf_sha256: "a".repeat(64), accion: "descargar",
+  }))), 400);
+  if (archivo.error.mensaje !== "La descarga solo está disponible con el QR o con folio y código") {
+    throw new Error("Mensaje inesperado para descargar mediante archivo");
+  }
+
+  const token = await error(await manejarVerificacion(post(JSON.stringify({
+    metodo: "qr", token: "1234567890", accion: "descargar",
+  }))), 400);
+  if (token.error.mensaje !== "El enlace no es válido") {
+    throw new Error("Mensaje inesperado para token corto con descarga");
+  }
+});

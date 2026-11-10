@@ -1,4 +1,5 @@
 import {
+  descargarOriginalSimulado,
   emitirDocumentoSimulado,
   validarSolicitudVerificarCliente,
   verificarSimulado
@@ -8,8 +9,10 @@ import { calcularSha256Archivo, normalizarCodigo, normalizarFolio } from './form
 import {
   ErrorApi,
   ErrorContratoCuerpo,
+  RespuestaDescargaOriginal,
   RespuestaEmitirDocumento,
   RespuestaVerificacion,
+  SolicitudDescargarOriginal,
   SolicitudEmitirDocumento,
   SolicitudVerificar
 } from './tipos';
@@ -80,6 +83,71 @@ export async function verificar(solicitud: SolicitudVerificar): Promise<Respuest
   }
 
   return json as RespuestaVerificacion;
+}
+
+/**
+ * Llama a POST /functions/v1/verificar con accion: 'descargar' según el contrato (§2.1).
+ * Solo aplica para documentos vigentes consultados por QR o por folio y código.
+ */
+export async function descargarOriginal(
+  entrada: SolicitudDescargarOriginal
+): Promise<RespuestaDescargaOriginal> {
+  validarSolicitudVerificarCliente(entrada);
+
+  if (USAR_API_SIMULADA) {
+    return descargarOriginalSimulado(entrada);
+  }
+
+  const cuerpo =
+    entrada.metodo === 'manual'
+      ? {
+          metodo: 'manual' as const,
+          folio: normalizarFolio(entrada.folio),
+          codigo: normalizarCodigo(entrada.codigo),
+          accion: 'descargar' as const
+        }
+      : {
+          metodo: 'qr' as const,
+          token: entrada.token,
+          accion: 'descargar' as const
+        };
+
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/functions/v1/verificar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_PUBLISHABLE_KEY
+      },
+      body: JSON.stringify(cuerpo)
+    });
+  } catch {
+    throw new Error('ERROR_RED');
+  }
+
+  const json = await response.json().catch(() => null);
+
+  if (response.status === 429) {
+    return {
+      resultado: 'limite_excedido',
+      descarga: null
+    };
+  }
+
+  if (!response.ok) {
+    const errCuerpo = json as ErrorContratoCuerpo | null;
+    if (errCuerpo?.error) {
+      throw new ErrorApi(errCuerpo.error.codigo, errCuerpo.error.mensaje, response.status);
+    }
+    throw new ErrorApi(
+      'INTERNO',
+      'No se pudo preparar la descarga. Intente de nuevo.',
+      response.status
+    );
+  }
+
+  return json as RespuestaDescargaOriginal;
 }
 
 /**

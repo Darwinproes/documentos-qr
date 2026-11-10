@@ -548,6 +548,25 @@
   color: var(--texto);
 }
 
+.descarga-original-bloque {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.descarga-original-bloque .alert {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.descarga-original-nota {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--texto-tenue);
+}
+
 .resultado-acciones {
   display: flex;
   padding-top: 4px;

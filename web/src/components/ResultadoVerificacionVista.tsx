@@ -10,12 +10,15 @@ import {
   DocumentoVerificado,
   MetodoVerificacion,
   RespuestaVerificacion,
-  ResultadoVerificacion
+  ResultadoVerificacion,
+  SolicitudDescargarOriginal
 } from '../lib/tipos';
+import { DescargaOriginal } from './verificar/DescargaOriginal';
 
 interface ResultadoVerificacionVistaProps {
   respuesta: RespuestaVerificacion;
   metodo?: MetodoVerificacion;
+  solicitudDescarga?: SolicitudDescargarOriginal;
   onVerificarOtro?: () => void;
 }
 
@@ -174,11 +177,17 @@ function textoMetodo(metodo?: MetodoVerificacion): string | null {
 export function ResultadoVerificacionVista({
   respuesta,
   metodo,
+  solicitudDescarga,
   onVerificarOtro
 }: ResultadoVerificacionVistaProps) {
   const { resultado, documento, verificado_en } = respuesta;
   const titulo = obtenerTituloEstado(resultado);
   const etiquetaMetodo = textoMetodo(metodo);
+  const mostrarDescargaOriginal =
+    resultado === 'valido' &&
+    Boolean(documento) &&
+    (metodo === 'qr' || metodo === 'token' || metodo === 'manual') &&
+    Boolean(solicitudDescarga);
 
   return (
     <section
@@ -288,6 +297,10 @@ export function ResultadoVerificacionVista({
             </ul>
           </div>
         )
+      )}
+
+      {mostrarDescargaOriginal && solicitudDescarga && (
+        <DescargaOriginal solicitud={solicitudDescarga} />
       )}
 
       <p className="aviso-dominio-institucional" role="note">
