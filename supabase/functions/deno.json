@@ -5,6 +5,7 @@
     "qrcode": "npm:qrcode@1.5.4",
     "@signpdf/signpdf": "npm:@signpdf/signpdf@3.3.0",
     "@signpdf/signer-p12": "npm:@signpdf/signer-p12@3.3.0",
-    "@signpdf/placeholder-pdf-lib": "npm:@signpdf/placeholder-pdf-lib@3.3.0"
+    "@signpdf/placeholder-pdf-lib": "npm:@signpdf/placeholder-pdf-lib@3.3.0",
+    "node-forge": "npm:node-forge@1.4.2"
   }
 }

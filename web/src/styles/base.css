@@ -1,0 +1,182 @@
+:root {
+  /* Identidad institucional PROESA Electrónica */
+  --marino: #091E3E;
+  --marino-borde: #1E3558;
+  --texto: #1F2933;
+  --texto-tenue: #52606D;
+  --texto-en-marino: #C7D3E3;
+  --azul-enlace: #00699A;
+  --azul-mar: #0093D3;
+  --fondo: #FFFFFF;
+  --fondo-suave: #F4F6F9;
+  --linea: #E4E8ED;
+  --linea-fuerte: #D5DAE1;
+  --valido: #1E7B45;
+  --vencido: #8A5A00;
+  --cancelado: #B42318;
+  --rojo-marca: #D4312C;
+
+  /* Tonos auxiliares institucionales (definidos solo en :root) */
+  --marino-hover: #102A54;
+  --marino-contorno-claro: #3A5277;
+  --texto-nav-inactivo: #DCE4EE;
+  --azul-enlace-hover: #004E73;
+  --fondo-tabla-th: #F1F3F6;
+  --texto-tabla-th: #3E4C59;
+  --borde-campo: #9AA5B1;
+  --valido-fondo: #ECF6F0;
+  --valido-borde: #95C9AA;
+  --vencido-fondo: #FDF6E9;
+  --vencido-borde: #DFB872;
+  --cancelado-fondo: #FDF2F2;
+  --cancelado-borde: #E6A8A3;
+
+  /* Tipografía auto-hospedada (@fontsource) */
+  --fuente-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --fuente-sans: 'Source Sans 3', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, sans-serif;
+  --fuente-mono: 'Source Code Pro', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+
+  /* Bordes casi rectos */
+  --radio-control: 4px;
+  --radio-contenedor: 10px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: var(--fuente-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--texto);
+  background-color: var(--fondo);
+  overflow-x: hidden;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+a {
+  color: var(--azul-enlace);
+}
+
+a:hover {
+  color: var(--azul-enlace-hover);
+}
+
+:focus-visible {
+  outline: 3px solid var(--azul-enlace);
+  outline-offset: 2px;
+}
+
+/* Utilidades de accesibilidad y formato */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -120px;
+  left: 16px;
+  z-index: 999;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--marino);
+  color: var(--fondo);
+  padding: 10px 16px;
+  border-radius: var(--radio-control);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+.mono-text {
+  font-family: var(--fuente-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.mono-fecha {
+  font-family: var(--fuente-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+.nowrap-domain,
+.nowrap-code {
+  white-space: nowrap;
+}
+
+.text-muted {
+  color: var(--texto-tenue);
+}
+
+.text-small {
+  font-size: 0.875rem;
+}
+
+.text-danger {
+  color: var(--cancelado);
+}
+
+.mt-xs {
+  margin-top: 8px;
+}
+
+.mt-md {
+  margin-top: 16px;
+}
+
+.mt-section {
+  margin-top: 20px;
+}
+
+/* Contenedores generales */
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.page-narrow {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

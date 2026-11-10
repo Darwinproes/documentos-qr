@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ORG_NOMBRE } from '../lib/config';
-import { useTituloDocumento } from '../lib/useCargaDiferida';
+import { useTituloDocumento } from '../lib/hooks';
 
 interface ErroresLogin {
   correo?: string;

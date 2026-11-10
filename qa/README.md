@@ -16,14 +16,28 @@ npm run qa:panel
 
 El comando compila `web/` con la URL local `http://127.0.0.1:54399`, copia la
 compilación a `qa/salida/dist`, levanta el Supabase simulado y `vite preview`, corre
-los casos del panel y la auditoría a 360, 768 y 1440 px y apaga ambos servidores.
-Las capturas y `reporte.json` quedan en `qa/salida/` (ignorada en git).
+los casos del panel y la auditoría a 360, 768 y 1440 px, genera capturas de estados
+a 360 y 1440 px y apaga ambos servidores. El simulador incluye cinco tipos, fechas
+capturadas y vacías, eventos de emisión y cancelación y perfiles con nombres largos.
+La auditoría registra desplazamiento horizontal interno, identificadores partidos,
+fechas ISO visibles y controles de selección mayores a 28 px. Reporte y capturas
+quedan en `qa/salida/` (ignorada en git).
 
 Ejemplo de ejecución:
 
 ```sh
 QA_CLAVE="clave-local-de-prueba" QA_CHROME_PATH="/usr/bin/google-chrome" npm run qa:panel
 ```
+
+Para generar solo las capturas de estados usando el simulador:
+
+```sh
+npm run qa:estados
+```
+
+Las imágenes se guardan en `qa/salida/estados/360/` y `qa/salida/estados/1440/`.
+Incluyen login vacío y con error, listas normal y vacía, detalle, modal de cancelación,
+los cuatro pasos de emisión, tipos, usuarios, menú móvil y rol Consulta.
 
 ## Verificación pública real
 

@@ -7,8 +7,8 @@ import {
 } from '../components/ResultadoVerificacionVista';
 import { verificar } from '../lib/api';
 import { validarFormatoToken } from '../lib/formato';
+import { useCargaDiferida, useTituloDocumento } from '../lib/hooks';
 import { ErrorApi, RespuestaVerificacion } from '../lib/tipos';
-import { useCargaDiferida, useTituloDocumento } from '../lib/useCargaDiferida';
 
 export function VerificacionTokenPage() {
   useTituloDocumento('Resultado de verificación');

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LayoutPanel } from '../components/LayoutPanel';
+import { TablaUsuarios } from '../components/panel/TablaUsuarios';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
-import { Perfil, RolUsuario } from '../lib/tipos';
-import { useCargaDiferida, useEsMovil, useTituloDocumento } from '../lib/useCargaDiferida';
+import { useCargaDiferida, useEsMovil, useTituloDocumento } from '../lib/hooks';
+import { actualizarPerfil, listarPerfiles } from '../lib/panel';
+import { Perfil } from '../lib/tipos';
 
 export function UsuariosAdminPage() {
   useTituloDocumento('Panel · Usuarios y roles');
@@ -24,25 +25,14 @@ export function UsuariosAdminPage() {
   const cargarUsuarios = useCallback(async () => {
     setCargando(true);
     setErrorGeneral(null);
-
     try {
-      const { data, error } = await supabase
-        .from('perfiles')
-        .select('id,nombre,area,rol,activo,creado_en')
-        .order('creado_en', { ascending: true });
-
-      if (error) {
-        setErrorGeneral('No fue posible cargar la lista de perfiles de usuario.');
-        return;
-      }
-
-      const lista = (data || []) as Perfil[];
+      const lista = await listarPerfiles();
       setUsuarios(lista);
       const mapa: Record<string, Perfil> = {};
-      for (const item of lista) {
-        mapa[item.id] = { ...item };
-      }
+      for (const item of lista) mapa[item.id] = { ...item };
       setOriginales(mapa);
+    } catch {
+      setErrorGeneral('No fue posible cargar la lista de perfiles de usuario.');
     } finally {
       setCargando(false);
     }
@@ -63,11 +53,7 @@ export function UsuariosAdminPage() {
     );
   };
 
-  const actualizarFilaLocal = <K extends keyof Perfil>(
-    id: string,
-    campo: K,
-    valor: Perfil[K]
-  ) => {
+  const actualizarFilaLocal = <K extends keyof Perfil>(id: string, campo: K, valor: Perfil[K]) => {
     setGuardadoRecienteId((prev) => (prev === id ? null : prev));
     setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, [campo]: valor } : u)));
   };
@@ -78,35 +64,27 @@ export function UsuariosAdminPage() {
     setMensajeExito(null);
 
     try {
-      const { error } = await supabase
-        .from('perfiles')
-        .update({
-          nombre: usuario.nombre.trim(),
-          area: usuario.area?.trim() || null,
-          rol: usuario.rol,
-          activo: usuario.activo
-        })
-        .eq('id', usuario.id);
-
-      if (error) {
-        setErrorGeneral(error.message || 'No se pudo actualizar el perfil del usuario.');
-        return;
-      }
+      const nombreLimpio = usuario.nombre.trim();
+      const areaLimpia = usuario.area?.trim() || null;
+      await actualizarPerfil(usuario.id, {
+        nombre: nombreLimpio,
+        area: areaLimpia,
+        rol: usuario.rol,
+        activo: usuario.activo
+      });
 
       setOriginales((prev) => ({
         ...prev,
-        [usuario.id]: {
-          ...usuario,
-          nombre: usuario.nombre.trim(),
-          area: usuario.area?.trim() || null
-        }
+        [usuario.id]: { ...usuario, nombre: nombreLimpio, area: areaLimpia }
       }));
       setGuardadoRecienteId(usuario.id);
       setMensajeExito(`Perfil de «${usuario.nombre}» actualizado correctamente — Guardado.`);
 
-      if (perfilActual?.id === usuario.id) {
-        await recargarPerfil();
-      }
+      if (perfilActual?.id === usuario.id) await recargarPerfil();
+    } catch (err) {
+      setErrorGeneral(
+        err instanceof Error ? err.message : 'No se pudo actualizar el perfil del usuario.'
+      );
     } finally {
       setGuardandoId(null);
       setConfirmacionPropia(null);
@@ -118,18 +96,15 @@ export function UsuariosAdminPage() {
       setErrorGeneral('El nombre del usuario no puede quedar vacío.');
       return;
     }
-
-    const esPropio = perfilActual?.id === usuario.id;
-    if (esPropio && (!usuario.activo || usuario.rol !== 'admin')) {
+    if (perfilActual?.id === usuario.id && (!usuario.activo || usuario.rol !== 'admin')) {
       setConfirmacionPropia(usuario);
       return;
     }
-
     void ejecutarGuardadoPerfil(usuario);
   };
 
   return (
-    <LayoutPanel rolesPermitidos={['admin']}>
+    <LayoutPanel>
       <div className="panel-header-row">
         <div>
           <h1 className="panel-page-title">Usuarios y roles</h1>
@@ -139,7 +114,6 @@ export function UsuariosAdminPage() {
         </div>
       </div>
 
-      {/* G11: Aviso de alta plegable */}
       <details className="card info-details">
         <summary className="info-summary">¿Cómo dar de alta a alguien?</summary>
         <div className="info-body">
@@ -151,15 +125,10 @@ export function UsuariosAdminPage() {
       </details>
 
       {mensajeExito && (
-        <div className="alert alert-success" role="status" aria-live="polite">
-          {mensajeExito}
-        </div>
+        <div className="alert alert-success" role="status" aria-live="polite">{mensajeExito}</div>
       )}
-
       {errorGeneral && (
-        <div className="alert alert-error" role="alert">
-          {errorGeneral}
-        </div>
+        <div className="alert alert-error" role="alert">{errorGeneral}</div>
       )}
 
       {cargando && mostrarEsqueleto && (
@@ -171,220 +140,20 @@ export function UsuariosAdminPage() {
       )}
 
       {!cargando && (
-        <>
-          {!esMovil ? (
-            <div className="card table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Nombre</th>
-                    <th scope="col">Área</th>
-                    <th scope="col">Rol</th>
-                    <th scope="col">Estado</th>
-                    <th scope="col">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuarios.map((u) => {
-                    const modificado = filaModificada(u);
-                    const esPropio = perfilActual?.id === u.id;
-                    return (
-                      <tr key={u.id}>
-                        <td>
-                          <span className="sr-only">{u.nombre}</span>
-                          <div className="user-name-cell">
-                            <input
-                              type="text"
-                              aria-label={`Nombre de ${u.nombre}`}
-                              className="form-input form-input-compact"
-                              placeholder="Ej. María López"
-                              value={u.nombre}
-                              onChange={(e) => actualizarFilaLocal(u.id, 'nombre', e.target.value)}
-                            />
-                            {esPropio && (
-                              <span className="cuenta-actual-pill">Tu cuenta actual</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            aria-label={`Área de ${u.nombre}`}
-                            className="form-input form-input-compact"
-                            placeholder="Ej. Recursos Humanos"
-                            value={u.area || ''}
-                            onChange={(e) => actualizarFilaLocal(u.id, 'area', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          <select
-                            aria-label={`Rol de ${u.nombre}`}
-                            className="form-select form-input-compact"
-                            value={u.rol}
-                            onChange={(e) =>
-                              actualizarFilaLocal(u.id, 'rol', e.target.value as RolUsuario)
-                            }
-                          >
-                            <option value="admin">Administrador</option>
-                            <option value="emisor">Emisor</option>
-                            <option value="consulta">Consulta</option>
-                          </select>
-                        </td>
-                        <td className="cell-nowrap">
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={u.activo}
-                            aria-label={`Usuario activo ${u.nombre}`}
-                            className={`switch-btn ${u.activo ? 'switch-btn-on' : 'switch-btn-off'}`}
-                            onClick={() => actualizarFilaLocal(u.id, 'activo', !u.activo)}
-                          >
-                            <span className="switch-track" aria-hidden="true">
-                              <span className="switch-thumb" />
-                            </span>
-                            <span className="switch-label">
-                              {u.activo ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </button>
-                        </td>
-                        <td className="cell-nowrap">
-                          <div className="user-save-cell">
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              disabled={!modificado || guardandoId === u.id}
-                              onClick={() => solicitarGuardarPerfil(u)}
-                            >
-                              {guardandoId === u.id ? 'Guardando…' : 'Guardar'}
-                            </button>
-                            {guardadoRecienteId === u.id && !modificado && (
-                              <span className="saved-inline-pill" aria-live="polite">
-                                Guardado
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* G11: Tarjetas compactas en celular (nombre+área en fila 1, rol+interruptor en fila 2) */
-            <div className="mobile-cards-only">
-              {usuarios.map((u) => {
-                const modificado = filaModificada(u);
-                const esPropio = perfilActual?.id === u.id;
-                return (
-                  <div key={u.id} className="card mobile-user-card">
-                    {esPropio && (
-                      <div className="mobile-user-head">
-                        <span className="cuenta-actual-pill">Tu cuenta actual</span>
-                      </div>
-                    )}
-                    <div className="mobile-user-row2col">
-                      <div className="form-group">
-                        <label htmlFor={`m-nom-${u.id}`} className="form-label">
-                          Nombre
-                        </label>
-                        <input
-                          id={`m-nom-${u.id}`}
-                          type="text"
-                          aria-label={`Nombre de ${u.nombre}`}
-                          className="form-input form-input-compact"
-                          placeholder="Ej. María López"
-                          value={u.nombre}
-                          onChange={(e) => actualizarFilaLocal(u.id, 'nombre', e.target.value)}
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor={`m-area-${u.id}`} className="form-label">
-                          Área
-                        </label>
-                        <input
-                          id={`m-area-${u.id}`}
-                          type="text"
-                          aria-label={`Área de ${u.nombre}`}
-                          className="form-input form-input-compact"
-                          placeholder="Ej. Sistemas"
-                          value={u.area || ''}
-                          onChange={(e) => actualizarFilaLocal(u.id, 'area', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mobile-user-row2col">
-                      <div className="form-group">
-                        <label htmlFor={`m-rol-${u.id}`} className="form-label">
-                          Rol
-                        </label>
-                        <select
-                          id={`m-rol-${u.id}`}
-                          aria-label={`Rol de ${u.nombre}`}
-                          className="form-select form-input-compact"
-                          value={u.rol}
-                          onChange={(e) =>
-                            actualizarFilaLocal(u.id, 'rol', e.target.value as RolUsuario)
-                          }
-                        >
-                          <option value="admin">Administrador</option>
-                          <option value="emisor">Emisor</option>
-                          <option value="consulta">Consulta</option>
-                        </select>
-                      </div>
-
-                      <div className="form-group">
-                        <span className="form-label">Estado</span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={u.activo}
-                          aria-label={`Usuario activo ${u.nombre}`}
-                          className={`switch-btn ${u.activo ? 'switch-btn-on' : 'switch-btn-off'}`}
-                          onClick={() => actualizarFilaLocal(u.id, 'activo', !u.activo)}
-                        >
-                          <span className="switch-track" aria-hidden="true">
-                            <span className="switch-thumb" />
-                          </span>
-                          <span className="switch-label">
-                            {u.activo ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="user-save-cell mt-xs">
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-block"
-                        disabled={!modificado || guardandoId === u.id}
-                        onClick={() => solicitarGuardarPerfil(u)}
-                      >
-                        {guardandoId === u.id ? 'Guardando…' : 'Guardar'}
-                      </button>
-                      {guardadoRecienteId === u.id && !modificado && (
-                        <span className="saved-inline-pill" aria-live="polite">
-                          Guardado
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+        <TablaUsuarios
+          usuarios={usuarios}
+          esMovil={esMovil}
+          perfilActualId={perfilActual?.id}
+          guardandoId={guardandoId}
+          guardadoRecienteId={guardadoRecienteId}
+          filaModificada={filaModificada}
+          onActualizarCampo={actualizarFilaLocal}
+          onGuardar={solicitarGuardarPerfil}
+        />
       )}
 
       {confirmacionPropia && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-propia-titulo"
-        >
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-propia-titulo">
           <div className="card modal-card">
             <h2 id="modal-propia-titulo" className="section-title">
               Confirmar cambio en tu propia cuenta
@@ -395,11 +164,7 @@ export function UsuariosAdminPage() {
               sección inmediatamente.
             </p>
             <div className="modal-actions mt-md">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setConfirmacionPropia(null)}
-              >
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmacionPropia(null)}>
                 Cancelar
               </button>
               <button

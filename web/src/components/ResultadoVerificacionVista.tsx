@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CONTACTO_REPORTE, DOMINIO_OFICIAL, ORG_NOMBRE } from '../lib/config';
 import {
-  formatearFechaCorta,
-  formatearFechaHoraMX,
+  formatearFecha,
+  formatearFechaHora,
   formatearValorCampo
 } from '../lib/formato';
 import {
@@ -132,7 +132,7 @@ function renderizarOracionVeredicto(
   }
   if (resultado === 'vencido' && documento) {
     const fechaFin = documento.vigente_hasta
-      ? formatearFechaCorta(documento.vigente_hasta)
+      ? formatearFecha(documento.vigente_hasta)
       : 'registro oficial';
     return (
       <>
@@ -143,7 +143,7 @@ function renderizarOracionVeredicto(
   }
   if (resultado === 'cancelado' && documento) {
     const fechaCancelacion = documento.cancelado_en
-      ? formatearFechaCorta(documento.cancelado_en)
+      ? formatearFecha(documento.cancelado_en)
       : 'registro oficial';
     return (
       <>
@@ -186,7 +186,7 @@ export function ResultadoVerificacionVista({
       aria-labelledby="titulo-veredicto"
     >
       <p className="veredicto-meta">
-        Resultado de la verificación · {formatearFechaHoraMX(verificado_en)}
+        Resultado de la verificación · {formatearFechaHora(verificado_en)}
         {etiquetaMetodo ? ` · ${etiquetaMetodo}` : ''}
       </p>
 
@@ -230,14 +230,14 @@ export function ResultadoVerificacionVista({
 
           <div className="renglon-fila">
             <dt className="renglon-dt">Emitido</dt>
-            <dd className="renglon-dd">{formatearFechaCorta(documento.emitido_en)}</dd>
+            <dd className="renglon-dd">{formatearFecha(documento.emitido_en)}</dd>
           </div>
 
           <div className="renglon-fila">
             <dt className="renglon-dt">Vigencia</dt>
             <dd className="renglon-dd">
               {documento.vigente_hasta
-                ? formatearFechaCorta(documento.vigente_hasta)
+                ? formatearFecha(documento.vigente_hasta)
                 : 'Sin vencimiento'}
             </dd>
           </div>
@@ -245,7 +245,7 @@ export function ResultadoVerificacionVista({
           {resultado === 'cancelado' && documento.cancelado_en && (
             <div className="renglon-fila renglon-fila-alerta">
               <dt className="renglon-dt">Cancelado el</dt>
-              <dd className="renglon-dd">{formatearFechaCorta(documento.cancelado_en)}</dd>
+              <dd className="renglon-dd">{formatearFecha(documento.cancelado_en)}</dd>
             </div>
           )}
 

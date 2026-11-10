@@ -1,4 +1,5 @@
-import { EstadoVisualDocumento } from '../lib/tipos';
+import { esFechaVencida, esPorVencer30Dias } from '../lib/formato';
+import { DocumentoResumen, EstadoVisualDocumento } from '../lib/tipos';
 
 export type EstadoIndicador = EstadoVisualDocumento | 'por_vencer';
 
@@ -9,6 +10,16 @@ const ETIQUETA_ESTADO: Record<EstadoIndicador, string> = {
   cancelado: 'Cancelado',
   pendiente: 'Pendiente'
 };
+
+export function resolverEstadoIndicador(
+  doc: Pick<DocumentoResumen, 'estado' | 'vigente_hasta'>
+): EstadoIndicador {
+  if (doc.estado === 'cancelado') return 'cancelado';
+  if (doc.estado === 'pendiente') return 'pendiente';
+  if (doc.vigente_hasta && esFechaVencida(doc.vigente_hasta)) return 'vencido';
+  if (doc.vigente_hasta && esPorVencer30Dias(doc.vigente_hasta)) return 'por_vencer';
+  return 'vigente';
+}
 
 interface EtiquetaEstadoProps {
   estado: EstadoIndicador;

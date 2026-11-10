@@ -1,11 +1,10 @@
 import { EstadoDocumento, EstadoVisualDocumento } from './tipos';
 
 const REGEX_TOKEN = /^[A-Za-z0-9_-]{43}$/;
-const REGEX_FOLIO = /^[A-Za-z0-9]{2,10}-\d{4}-\d{6}$/;
+export const REGEX_FOLIO = /^[A-Za-z0-9]{2,10}-\d{4}-\d{6}$/;
 const REGEX_SHA256 = /^[0-9a-f]{64}$/i;
 const REGEX_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-export const PATRON_FOLIO = REGEX_FOLIO;
 export const PATRON_CODIGO_LIMPIO = /^[0-9A-HJ-NP-TV-Z]{10}$/;
 
 export function validarFormatoToken(token: string): boolean {
@@ -28,15 +27,11 @@ export function normalizarCodigo(codigo: string): string {
     .replace(/[^0-9A-Z]/g, '');
 }
 
-export const limpiarCodigoVerificacion = normalizarCodigo;
-
 export function formatearCodigoVisual(codigo: string): string {
   const limpio = normalizarCodigo(codigo).slice(0, 10);
   if (limpio.length <= 5) return limpio;
   return `${limpio.slice(0, 5)}-${limpio.slice(5, 10)}`;
 }
-
-export const normalizarCodigoConGuion = formatearCodigoVisual;
 
 export function validarFormatoFolio(folio: string): boolean {
   return REGEX_FOLIO.test(normalizarFolio(folio));
@@ -51,7 +46,7 @@ export function validarFormatoSha256(hash: string): boolean {
 }
 
 /**
- * Abrevia una huella SHA-256 como a048…2c2d (F5, G5).
+ * Abrevia una huella SHA-256 como a048…2c2d.
  */
 export function abreviarSha256(hash: string | null | undefined): string {
   if (!hash) return 'No capturado';
@@ -61,7 +56,7 @@ export function abreviarSha256(hash: string | null | undefined): string {
 }
 
 /**
- * Abrevia un enlace de verificación como dominio/v/…4chars (G5).
+ * Abrevia un enlace de verificación como dominio/v/…4chars.
  */
 export function abreviarEnlaceVerificacion(url: string | null | undefined): string {
   if (!url) return 'No capturado';
@@ -102,11 +97,9 @@ export function formatearFecha(iso: string | null | undefined): string {
   return `${dia}/${mes}/${anio}`;
 }
 
-export const formatearFechaCorta = formatearFecha;
-
 /**
  * Formatea un valor de campo dinámico: si es fecha ISO la convierte a dd/mm/aaaa;
- * si está vacío devuelve null para que la vista muestre «No capturado» (G6).
+ * si está vacío devuelve null para que la vista muestre «No capturado».
  */
 export function formatearValorCampo(
   valor: unknown,
@@ -153,8 +146,6 @@ export function formatearFechaHora(iso: string | null | undefined): string {
   }
 }
 
-export const formatearFechaHoraMX = formatearFechaHora;
-
 /**
  * Obtiene la fecha de hoy en America/Mexico_City en formato AAAA-MM-DD.
  */
@@ -175,8 +166,6 @@ export function hoyLocalIso(): string {
     return new Date().toISOString().slice(0, 10);
   }
 }
-
-export const hoyIsoLocal = hoyLocalIso;
 
 export function sumarDiasIso(dias: number): string {
   const hoy = hoyLocalIso();

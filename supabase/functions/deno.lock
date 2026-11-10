@@ -5,6 +5,8 @@
     "npm:@signpdf/signer-p12@3.3.0": "3.3.0_node-forge@1.4.2",
     "npm:@signpdf/signpdf@3.3.0": "3.3.0",
     "npm:@supabase/supabase-js@2.49.4": "2.49.4",
+    "npm:@types/node@*": "22.5.4",
+    "npm:node-forge@1.4.2": "1.4.2",
     "npm:pdf-lib@1.17.1": "1.17.1",
     "npm:qrcode@1.5.4": "1.5.4"
   },
@@ -298,9 +300,8 @@
       "npm:@signpdf/placeholder-pdf-lib@3.3.0",
       "npm:@signpdf/signer-p12@3.3.0",
       "npm:@signpdf/signpdf@3.3.0",
-      "npm:@signpdf/utils@3.3.0",
       "npm:@supabase/supabase-js@2.49.4",
-      "npm:node-forge@1.4.0",
+      "npm:node-forge@1.4.2",
       "npm:pdf-lib@1.17.1",
       "npm:qrcode@1.5.4"
     ]

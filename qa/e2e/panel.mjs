@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { iniciarSesion, openBrowser, requiredEnv } from './common.mjs';
+import { iniciarSesion, requiredEnv, runCases } from './common.mjs';
 
 const baseUrl = process.env.QA_PANEL_URL || 'http://127.0.0.1:4173';
 const password = requiredEnv('QA_CLAVE');
@@ -10,7 +10,7 @@ const accounts = {
   inactivo: 'inactivo@proesa.test',
 };
 const cases = [];
-const test = (name, run) => cases.push({ name, run });
+const test = (name, run) => cases.push({ id: name, run });
 async function adminPage(browser, path = '/panel') {
   const page = await browser.newPage();
   await iniciarSesion(page, baseUrl, accounts.admin, password);
@@ -34,12 +34,111 @@ test('login incorrecto muestra un error accesible', async (browser) => {
   await page.getByRole('alert').getByText(/correo electrónico o contraseña incorrectos/i).waitFor();
 });
 
+test('login vacío marca ambos campos y enlaza los errores', async (browser) => {
+  const page = await browser.newPage();
+  await page.goto(`${baseUrl}/panel/login`);
+  await page.getByRole('button', { name: /iniciar sesión/i }).click();
+  for (const id of ['login-correo', 'login-contrasena']) {
+    const field = page.locator(`#${id}`);
+    assert.equal(await field.getAttribute('aria-invalid'), 'true');
+    assert.ok(await field.getAttribute('aria-describedby'));
+  }
+  assert.equal(await page.locator('#login-error-summary').evaluate((element) => element === document.activeElement), true);
+});
+
+test('emisión vacía resume todos los campos requeridos y enfoca el resumen', async (browser) => {
+  const page = await adminPage(browser, '/panel/emitir');
+  await page.getByRole('button', { name: /continuar a captura de datos/i }).click();
+  await page.getByRole('button', { name: /revisar y confirmar/i }).click();
+  const summary = page.locator('.error-summary');
+  await summary.waitFor();
+  assert.match(await summary.innerText(), /destinatario/i);
+  assert.match(await summary.innerText(), /concepto/i);
+  assert.equal(await summary.evaluate((element) => element === document.activeElement), true);
+});
+
+test('clave inválida de tipo muestra error junto al campo', async (browser) => {
+  const page = await adminPage(browser, '/panel/tipos');
+  await page.getByRole('button', { name: /nuevo tipo de documento/i }).click();
+  await page.getByLabel(/clave única/i).fill('A');
+  await page.getByRole('button', { name: /guardar tipo de documento/i }).click();
+  const key = page.locator('#tipo-clave');
+  assert.equal(await key.getAttribute('aria-invalid'), 'true');
+  assert.ok(await key.getAttribute('aria-describedby'));
+});
+
+test('modal de cancelación marca la confirmación cuando falta', async (browser) => {
+  const page = await adminPage(browser, '/panel/documentos/00000000-0000-4000-8000-000000000101');
+  await page.getByRole('button', { name: /cancelar documento/i }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('textbox', { name: /motivo de la cancelación/i }).fill('Motivo válido para la prueba.');
+  await dialog.getByRole('button', { name: /confirmar cancelación/i }).click();
+  const checkbox = dialog.getByRole('checkbox');
+  assert.equal(await checkbox.getAttribute('aria-invalid'), 'true');
+  assert.ok(await checkbox.getAttribute('aria-describedby'));
+});
+
+test('tipos en 360 px muestran tarjetas y acciones dentro de pantalla', async (browser) => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 900 } });
+  await iniciarSesion(page, baseUrl, accounts.admin, password);
+  await page.goto(`${baseUrl}/panel/tipos`);
+  await page.locator('.mobile-tipo-card').first().waitFor();
+  assert.ok(await page.locator('.mobile-tipo-card').count() >= 5);
+  const outside = await page.locator('.mobile-tipo-card button').evaluateAll((buttons) => buttons.filter((button) => button.getBoundingClientRect().right > 360).length);
+  assert.equal(outside, 0, 'Editar y Desactivar deben caber en 360 px');
+});
+
+test('filtros móviles se pliegan y el primer documento aparece pronto', async (browser) => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 900 } });
+  await iniciarSesion(page, baseUrl, accounts.admin, password);
+  await page.goto(`${baseUrl}/panel`);
+  const firstDocument = page.locator('a[href^="/panel/documentos/"]').first();
+  assert.ok((await firstDocument.boundingBox()).y < 780);
+  const toggle = page.getByRole('button', { name: /^filtros/i });
+  assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+  await toggle.click();
+  assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+  await page.getByLabel('Estado').waitFor();
+  await page.getByLabel(/tipo de documento/i).waitFor();
+});
+
+test('placeholders del panel empiezan con Ej. o están vacíos', async (browser) => {
+  const page = await adminPage(browser, '/panel/tipos');
+  await page.getByRole('button', { name: /nuevo tipo de documento/i }).click();
+  const invalid = await page.locator('input[placeholder], textarea[placeholder]').evaluateAll((fields) => fields.map((field) => field.getAttribute('placeholder')).filter((placeholder) => placeholder && !placeholder.startsWith('Ej.')));
+  assert.deepEqual(invalid, []);
+});
+
+test('tipo activo usa un interruptor accesible', async (browser) => {
+  const page = await adminPage(browser, '/panel/tipos');
+  await page.getByRole('button', { name: /nuevo tipo de documento/i }).click();
+  await page.getByRole('switch', { name: /disponibilidad/i }).waitFor();
+});
+
+test('lista vacía ofrece una sola acción y repite la búsqueda', async (browser) => {
+  const page = await adminPage(browser);
+  await page.getByRole('searchbox', { name: /buscar por folio o destinatario/i }).fill('zzzz-sin-resultados');
+  await page.getByRole('button', { name: /^buscar$/i }).click();
+  await page.getByText(/zzzz-sin-resultados/i).waitFor();
+  assert.equal(await page.getByRole('button', { name: /limpiar filtros|restablecer búsqueda/i }).count(), 1);
+});
+
+test('emblema y resultado público identifican al destinatario sin canvas', async (browser) => {
+  const page = await browser.newPage();
+  await page.goto(`${baseUrl}/`);
+  assert.ok(await page.locator('img[src*="emblema-proesa"]').count());
+  await page.goto(`${baseUrl}/v/Qm9EjemploTokenValidoDe43CaracteresExactos1`);
+  await page.getByText(/a nombre de/i).waitFor();
+  await page.getByText(/María Fernanda Gómez Hernández/i).first().waitFor();
+  assert.equal(await page.locator('canvas').count(), 0);
+});
+
 test('admin busca, filtra y pagina documentos', async (browser) => {
   const page = await adminPage(browser);
   const search = page.getByRole('searchbox', { name: /buscar por folio o destinatario/i });
   await search.fill('María');
   await page.getByRole('button', { name: /^buscar$/i }).click();
-  await page.getByText(/María Fernanda Gómez Hernández/i).waitFor();
+  await page.getByText(/María Fernanda Gómez Hernández/i).first().waitFor();
   await page.getByLabel('Estado').selectOption('cancelado');
   await page.getByText(/cancelado/i).first().waitFor();
   await page.getByLabel('Estado').selectOption('');
@@ -160,15 +259,4 @@ test('cerrar sesión regresa al login', async (browser) => {
   await page.getByRole('heading', { name: /^panel interno/i }).waitFor();
 });
 
-const browser = await openBrowser();
-const results = [];
-try {
-  for (const item of cases) {
-    const started = Date.now();
-    try { await item.run(browser); results.push({ caso: item.name, estado: 'OK', ms: Date.now() - started }); }
-    catch (error) { results.push({ caso: item.name, estado: 'FALLA', ms: Date.now() - started, error: error instanceof Error ? error.message : String(error) }); }
-  }
-} finally { await browser.close(); }
-console.log('caso | resultado | ms');
-for (const row of results) console.log(`${row.caso} | ${row.estado}${row.error ? ` — ${row.error}` : ''} | ${row.ms}`);
-if (results.some((row) => row.estado === 'FALLA')) process.exitCode = 1;
+await runCases(cases);

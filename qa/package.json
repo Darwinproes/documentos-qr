@@ -7,7 +7,8 @@
   },
   "scripts": {
     "qa:publica": "node e2e/publica.mjs",
-    "qa:panel": "node run-panel.mjs"
+    "qa:panel": "node run-panel.mjs",
+    "qa:estados": "node run-panel.mjs estados"
   },
   "devDependencies": {
     "playwright-core": "1.56.1"

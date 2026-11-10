@@ -1,12 +1,10 @@
 export type RolDocumentos = 'admin' | 'emisor' | 'consulta';
-export type RolUsuario = RolDocumentos;
 
 export type EstadoDocumento = 'pendiente' | 'vigente' | 'cancelado';
 
 export type EstadoVisualDocumento = 'pendiente' | 'vigente' | 'vencido' | 'cancelado';
 
 export type TipoCampo = 'texto' | 'texto_largo' | 'fecha' | 'numero';
-export type TipoCampoEsquema = TipoCampo;
 
 export interface DefinicionCampo {
   clave: string;
@@ -15,7 +13,6 @@ export interface DefinicionCampo {
   requerido: boolean;
   publico: boolean;
 }
-export type CampoEsquema = DefinicionCampo;
 
 export interface CampoVerificado {
   etiqueta: string;
@@ -147,7 +144,6 @@ export interface DocumentoDetalle extends DocumentoResumen {
   cancelado_en: string | null;
   motivo_cancelacion: string | null;
 }
-export type DocumentoPanel = DocumentoDetalle;
 
 export interface ResumenDocumentos {
   vigentes: number;

@@ -2,14 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ORG_NOMBRE } from '../lib/config';
-import { RolUsuario } from '../lib/tipos';
+import { RolDocumentos } from '../lib/tipos';
 
 interface LayoutPanelProps {
   children: React.ReactNode;
-  rolesPermitidos?: RolUsuario[];
 }
 
-function etiquetaRol(rol: RolUsuario): string {
+export function etiquetaRol(rol: RolDocumentos): string {
   switch (rol) {
     case 'admin':
       return 'Administrador';
@@ -28,7 +27,7 @@ function tituloSeccionActual(pathname: string): string {
   return 'Documentos emitidos';
 }
 
-export function LayoutPanel({ children, rolesPermitidos }: LayoutPanelProps) {
+export function LayoutPanel({ children }: LayoutPanelProps) {
   const { perfil, cargando, cerrarSesion } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -93,8 +92,6 @@ export function LayoutPanel({ children, rolesPermitidos }: LayoutPanelProps) {
   if (!perfil) {
     return <Navigate to="/panel/login" replace state={{ from: location.pathname }} />;
   }
-
-  const tienePermiso = !rolesPermitidos || rolesPermitidos.includes(perfil.rol);
 
   const manejarSalir = async () => {
     setMenuAbierto(false);
@@ -319,24 +316,7 @@ export function LayoutPanel({ children, rolesPermitidos }: LayoutPanelProps) {
       </aside>
 
       <main id="panel-contenido" className="panel-main" tabIndex={-1}>
-        <div className="panel-container">
-          {tienePermiso ? (
-            children
-          ) : (
-            <div className="card alert alert-error" role="alert">
-              <h1 className="section-title">Acceso restringido</h1>
-              <p>
-                Su cuenta tiene el rol <strong>{etiquetaRol(perfil.rol)}</strong> y no cuenta con
-                autorización para acceder a esta pantalla.
-              </p>
-              <div className="mt-md">
-                <Link to="/panel" className="btn btn-secondary">
-                  Volver al listado de documentos
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+        <div className="panel-container">{children}</div>
       </main>
     </div>
   );

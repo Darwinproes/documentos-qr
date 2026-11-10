@@ -26,7 +26,6 @@ export default function App() {
             </Suspense>
           }
         />
-        <Route path="/storage/*" element={<div />} />
         <Route path="*" element={<Navigate to="/verificar" replace />} />
       </Routes>
     </BrowserRouter>

@@ -61,11 +61,21 @@ async function waitFor(url, child) {
 
 try {
   await Promise.all([waitFor(`${supabaseUrl}/healthz`, mock), waitFor(`http://127.0.0.1:${webPort}/panel/login`, vite)]);
-  const panel = spawnSync(node, [path.join(qaRoot, 'e2e', 'panel.mjs')], { cwd: root, env: { ...process.env, QA_PANEL_URL: `http://127.0.0.1:${webPort}` }, stdio: 'inherit' });
-  const audit = panel.status === 0
-    ? spawnSync(node, [path.join(qaRoot, 'e2e', 'auditoria.mjs')], { cwd: root, env: { ...process.env, QA_PANEL_URL: `http://127.0.0.1:${webPort}` }, stdio: 'inherit' })
-    : null;
-  await stop(panel.status === 0 ? audit?.status ?? 1 : panel.status ?? 1);
+  const env = { ...process.env, QA_PANEL_URL: `http://127.0.0.1:${webPort}` };
+  const run = (file) => spawnSync(node, [path.join(qaRoot, 'e2e', file)], { cwd: root, env, stdio: 'inherit' });
+  let exitStatus;
+  if (process.argv[2] === 'estados') {
+    exitStatus = run('estados.mjs').status ?? 1;
+  } else {
+    const panel = run('panel.mjs');
+    exitStatus = panel.status ?? 1;
+    if (exitStatus === 0) {
+      const audit = run('auditoria.mjs');
+      exitStatus = audit.status ?? 1;
+    }
+    if (exitStatus === 0) exitStatus = run('estados.mjs').status ?? 1;
+  }
+  await stop(exitStatus);
 } catch (error) {
   console.error(error);
   await stop(1);

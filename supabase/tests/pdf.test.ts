@@ -1,5 +1,5 @@
-import { PDFDocument } from "npm:pdf-lib@1.17.1";
-import forge from "npm:node-forge@1.4.2";
+import { PDFDocument } from "pdf-lib";
+import forge from "node-forge";
 import { generarPdf, textoPiePagina, type DatosPdf } from "../functions/_shared/pdf.ts";
 import type { CredencialFirma } from "../functions/_shared/firma.ts";
 function assert(condition: unknown, message = "Aserción fallida"): asserts condition { if (!condition) throw new Error(message); }

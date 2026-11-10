@@ -7,7 +7,10 @@ import '@fontsource/source-sans-3/600.css';
 import '@fontsource/source-sans-3/700.css';
 import '@fontsource/source-code-pro/500.css';
 import '@fontsource/source-code-pro/600.css';
-import './index.css';
+import './styles/base.css';
+import './styles/componentes.css';
+import './styles/publico.css';
+import './styles/panel.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

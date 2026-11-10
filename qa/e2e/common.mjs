@@ -60,6 +60,7 @@ export async function runCases(cases, options = {}) {
   } finally {
     await browser?.close();
   }
+  await options.onFinish?.(results);
   console.log('caso | resultado | ms');
   for (const item of results) console.log(`${item.caso} | ${item.resultado}${item.error ? ` — ${item.error}` : ''} | ${item.ms}`);
   if (results.some((item) => item.resultado === 'FALLA')) process.exitCode = 1;

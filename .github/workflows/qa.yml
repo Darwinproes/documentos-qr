@@ -19,8 +19,8 @@ jobs:
         id: chrome
       - name: Revisar y probar Edge Functions
         run: |
-          deno check supabase/functions/emitir-documento/index.ts supabase/functions/verificar/index.ts
-          deno test --allow-read --allow-write=supabase/tests/salida supabase/tests/aleatorio.test.ts supabase/tests/validacion.test.ts supabase/tests/pdf.test.ts
+          deno check --config supabase/functions/deno.json supabase/functions/emitir-documento/index.ts supabase/functions/verificar/index.ts
+          deno test --config supabase/functions/deno.json --allow-env=ALLOWED_ORIGINS --allow-read --allow-write=supabase/tests/salida supabase/tests/aleatorio.test.ts supabase/tests/validacion.test.ts supabase/tests/pdf.test.ts supabase/tests/verificar.test.ts supabase/tests/emitir.test.ts
       - name: Compilar frontend
         working-directory: web
         run: npm ci --ignore-scripts --no-audit --no-fund && npm run build
@@ -43,4 +43,5 @@ jobs:
           path: |
             qa/salida/reporte.json
             qa/salida/capturas/
+            qa/salida/estados/
           if-no-files-found: ignore

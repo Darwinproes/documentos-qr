@@ -199,15 +199,46 @@ Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la
 - [x] P3 — Bloque de verificación sobrio, QR limpio, URL/folio/código monoespaciados.
 - [x] P4 — Retirados guilloche y sello; se conserva la línea de microtexto.
 - [x] P5 — Pruebas y PDF de ejemplo regenerados — 2026-10-29 (orquestador, Codex no tenía Deno): `deno check` OK, 10/10 pruebas, `ejemplo.pdf` 15 KB, QR legible en 12/12 condiciones en los tres PDF, firma íntegra (pyHanko).
-- [ ] H1 — Simulado con más tipos, fechas, bitácora con motivo y nombre largo
-- [ ] H2 — Casos del panel para G1, G2, G3, G4, G7 y G10
-- [ ] H3 — Auditoría: desplazamiento interno, folios partidos, fechas ISO, controles enormes
-- [ ] H4 — `npm run qa:estados`: capturas de todos los estados para el orquestador
-- [ ] H5 — README de `qa/` actualizado
+- [x] H1 — Simulado con cinco tipos, fechas vacías/llenas, bitácora de emisión/cancelación con motivo y un perfil con nombre largo — 2026-11-10; se comprueba con `npm run qa:panel`.
+- [x] H2 — Añadidos casos para errores accesibles, tipos/filtros móviles, ejemplos, interruptor, lista vacía e identidad N2/N5 — 2026-11-10; `npm run qa:panel`.
+- [x] H3 — Auditoría registra overflow interno, identificadores partidos, fechas ISO y controles de selección >28 px; columnas por pantalla/ancho en `reporte.json` — 2026-11-10; `npm run qa:panel`.
+- [x] H4 — `npm run qa:estados` genera capturas a 360/1440 px y se ejecuta también en CI — 2026-11-10; imágenes en `qa/salida/estados/`.
+- [x] H5 — README documenta nuevos datos, auditoría, salidas y `qa:estados` — 2026-11-10.
 
 ### Orquestador
 
-- [ ] O12 — Revisar G1–G13 con `qa:panel` y `qa:estados`, publicar con aprobación del usuario
+- [x] O12 — G1–G13 revisados con `qa:panel` 25/25 y `qa:estados` — 2026-11-10. Falta publicar, con aprobación del usuario.
+
+## Fase 5 — Estructura del código (2026-11-09)
+
+Origen: el usuario pidió una revisión completa del código buscando mejoras de estructura. El orquestador revisó funciones, migraciones, frontend, CSS, QA y documentación: nada roto; sí deuda de estructura que frenará el crecimiento. Regla de la fase: **cero cambios visuales ni de comportamiento** (salvo E2, que corrige un conteo). Documento de arquitectura y flujos: https://claude.ai/artifact/QadHwjEJBeBTJxzeVKe4o1
+
+### Antigravity (`tareas/ANTIGRAVITY-FASE5.md`)
+
+- [x] E1 — Capa de datos del panel `lib/panel.ts`; ninguna página importa `lib/supabase` — 2026-11-10: Creado `web/src/lib/panel.ts` con constantes únicas `COLUMNAS_DOCUMENTO`/`COLUMNAS_TIPO` y las 12 funciones del panel; probar verificando 0 coincidencias de `lib/supabase` en `web/src/pages/`.
+- [x] E2 — Filtro «vigente» resuelto en la consulta (hoy filtra en memoria tras paginar) — 2026-11-10: `listarDocumentos` aplica `.eq('estado', 'vigente').or('vigente_hasta.is.null,vigente_hasta.gte.${hoy}')` en PostgREST sin filtrado post-paginación; probar filtrando por «Vigentes» en `/panel`.
+- [x] E3 — Roles en `RutaProtegida`, no en `LayoutPanel` — 2026-11-10: `RutaProtegida` en `PanelRoutes.tsx` recibe `roles` y muestra «Acceso restringido» dentro de `LayoutPanel`, eliminando `rolesPermitidos` de las páginas; probar entrando con rol `consulta` a `/panel/emitir`.
+- [x] E4 — Páginas en componentes (ninguna > 350 líneas) — 2026-11-10: Extraídos componentes en `components/panel/`, `components/verificar/` y `pages/emitir/`; todas las páginas en `web/src/pages/*.tsx` tienen ≤ 332 líneas; probar con `cd qa && npm run qa:panel`.
+- [x] E5 — `lib/api-simulada.ts` separado de `api.ts` — 2026-11-10: Extraído el modo simulado a `web/src/lib/api-simulada.ts` usando `USAR_API_SIMULADA` de `config.ts`; probar con `cd web && npm run build`.
+- [x] E6 — Un solo nombre por concepto (12 alias) y 2 funciones duplicadas — 2026-11-10: Eliminados los 12 alias en `tipos.ts`, `formato.ts` y `api.ts`, y unificados `resolverEstadoIndicador` (`EtiquetaEstado.tsx`) y `formatearTamanoBytes` (`formato.ts`); probar buscando los nombres retirados en `web/src/`.
+- [x] E7 — Orden en `lib/`: `hooks.ts`, sin reexports, `config.ts` falla en PROD sin variables, sin ruta `/storage/*` — 2026-11-10: Renombrado `useCargaDiferida.ts` a `hooks.ts`, quitados reexports en `supabase.ts`, validación `import.meta.env.PROD` en `config.ts` y eliminada ruta `/storage/*` en `App.tsx`; probar con `cd web && npm run build`.
+- [x] E8 — `index.css` partido en `styles/base|publico|panel|componentes.css`; sin `btn-outline` ni `break-all` — 2026-11-10: Dividida la hoja en `web/src/styles/{base,publico,panel,componentes}.css` (0 hex fuera de `:root`), importados en orden en `main.tsx` y retiradas `.btn-outline` y `.break-all`; probar con `cd qa && npm run qa:panel`.
+
+### Codex (`tareas/CODEX-FASE5.md`, después de H1–H5)
+
+- [x] R1 — Manejadores exportados y `_shared/http.ts` con `leerJson` — 2026-11-10 (Codex; validado por el orquestador): `deno check --config supabase/functions/deno.json` OK; mismos códigos y mensajes del contrato.
+- [x] R2 — `verificar.test.ts` y `emitir.test.ts` en CI — 2026-11-10 (Codex; el orquestador corrigió una lectura doble del cuerpo en `verificar.test.ts`): `deno test` 14/14.
+- [x] R3 — Imports por el mapa de `deno.json`, `node-forge` en el mapa — 2026-11-10: `grep 'from "npm:' supabase/` vacío; check y test en verde con `--config`.
+- [x] R4 — Un solo `dibujarEncabezado` en `pdf.ts` — 2026-11-10: los tres PDF de ejemplo quedan idénticos al anterior en texto y píxel a píxel (PyMuPDF, 100 dpi).
+- [x] R5 — `panel.mjs` y `auditoria.mjs` con `runCases` y `onFinish` — 2026-11-10: `npm run qa:panel` 25/25 (22 casos + auditoría a 3 anchos), `reporte.json` con la misma forma.
+
+### Orquestador
+
+- [ ] O13 — Limpieza del repositorio con permiso del usuario: borrar los 93 `.bak` (41 en `web/src`, 3 en `web/public` que se cuelan en cada build local), `debug.log`, `tsconfig.tsbuildinfo`, `web/.env.local.bak`; mover fases cerradas a `tareas/archivo/`
+- [ ] O14 — Propuesta de regla: el `.bak` se conserva solo hasta el commit del cambio (git guarda la historia). Requiere visto bueno del usuario antes de tocar `AGENTS.md`.
+- [x] O15 — `docs/01-arquitectura.md` al día con la firma PAdES — 2026-11-09
+- [ ] O16 — Cuando lleguen formatos reales: migración con índices `documentos (emitido_en desc)`, `(estado, vigente_hasta)` y `pg_trgm` para la búsqueda por folio/destinatario
+- [x] O17 — Revisión de E1–E8 y R1–R5 — 2026-11-10 (ver *Revisión del orquestador*). Falta publicar, con aprobación del usuario.
 
 ## Pendientes del responsable (usuario)
 
@@ -219,6 +250,36 @@ Origen: el usuario pidió corregir el diseño interno. El orquestador corrió la
 - [ ] Para producción: subdominio propio (ej. `verifica.proesaelectronica.com`).
 
 ## Revisión del orquestador
+
+### Antigravity Fase 5 (E1–E8) — 2026-11-10 12:00
+
+Resultado: **aprobado con dos correcciones del orquestador**.
+
+- Criterios cumplidos: ninguna página importa `lib/supabase` (solo `AuthContext` y `lib/panel.ts`), todas ≤ 332 líneas, 0 alias, `resolverEstadoIndicador` y `formatearTamanoBytes` en un solo lugar, `hooks.ts`, sin ruta `/storage/*`, CSS en cuatro hojas sin `btn-outline` ni `.break-all`. El bundle público sigue sin el panel ni supabase-js.
+- `npm run build` OK; `qa:panel` 25/25; auditoría 0 problemas; capturas de `qa:estados` comparadas píxel a píxel contra el commit 9f9b13a: iguales salvo horas de emisión, el token aleatorio y capturas tomadas mientras cargaba.
+- Corregido — orden del CSS: con `base → publico → panel → componentes` (orden que pedía la tarea; error del orquestador) los estilos genéricos (`.btn`, `.btn-sm`, `.card`, `.form-input`, `.alert`) quedaban al final y pisaban los ajustes del panel: filas de tipos más altas y «Cerrar sesión» sin borde. `main.tsx` ahora importa `base → componentes → publico → panel`; la tarea se actualizó.
+- Corregido — regla 10: a las 11:31 se quitó de «Clave única» el filtro `replace(/[^A-Z0-9]/g, '')`, justo cuando la prueba «clave inválida» fallaba; el campo aceptaba «CLAVE INVÁ» y lo copiaba al prefijo. Se restauró el comportamiento anterior (la prueba ya se había corregido en `qa/`). Recordatorio: si una prueba falla, se anota en *Preguntas al orquestador*; el producto no se cambia para que pase.
+- Antes de publicar: `config.ts` ahora falla al arrancar en producción si faltan `VITE_SUPABASE_URL` o `VITE_SUPABASE_PUBLISHABLE_KEY`. El sitio actual de Render trae la clave publicable en el bundle (no tiene valor por defecto), así que las variables están definidas; confirmar ambas en Render → Environment antes del push.
+
+### Codex Fase 4 (H1–H5) y Fase 5 (R1–R5) — 2026-11-10 11:30
+
+Resultado: **aprobado**. Codex no tenía Deno ni un build de `web/` que compilara; el orquestador corrió todo:
+
+- `deno check` OK y `deno test` 14/14. Los PDF de ejemplo quedan idénticos tras R4. Ningún mensaje del contrato cambió.
+- `npm run qa:panel` 25/25; auditoría de 8 pantallas × 3 anchos con **0 problemas** (ya sin los folios partidos falsos); `qa:estados` genera sus capturas.
+- Corregido por el orquestador, solo en pruebas (el producto se comportaba bien en todos los casos):
+  - `verificar.test.ts`: leía dos veces el cuerpo de la misma respuesta.
+  - `panel.mjs`, resumen de errores: `getByRole('alert')` encontraba 3 alertas (resumen + 2 de campo); ahora busca `.error-summary`.
+  - `panel.mjs`, clave inválida: el campo convierte «clave con espacios» en «CLAVECONES», que es válida; ahora escribe «A».
+  - `panel.mjs`, tipos a 360 px: contaba tarjetas sin esperar a que cargaran.
+  - `panel.mjs`, resultado público: esperaba «Juan Pérez López» (modo demostración); en el simulado de QA ese documento es de «María Fernanda Gómez Hernández».
+  - `estados.mjs`: usaba CONST-2026-000001, que `panel.mjs` cancela antes; ahora usa CONST-2026-000002.
+
+### H1 y H3 — correcciones aplicadas por Codex — 2026-11-10
+
+- H3 mide renglones con `Range.getClientRects()`; no confunde la altura táctil de `.folio-table-link` con texto partido.
+- H1 calcula `nextTypeId` a partir del máximo id de los tipos del simulador para evitar repetir ids.
+- La sintaxis de los scripts QA pasó con `node --check`. La ejecución completa está pendiente porque `npm run qa:panel` falla antes de arrancar en el build actual de `web/` (exports ausentes de la refactorización Fase 5); ver *Preguntas al orquestador*.
 
 ### Fase 4 — 2026-10-29
 
@@ -286,3 +347,7 @@ Nota: Render **no** lee `public/_redirects` (es formato de Netlify). La reescrit
 _(Los agentes escriben aquí: fecha, agente, pregunta, qué opción eligieron mientras tanto.)_
 
 - **2026-10-29 — Antigravity:** En `N6` y `G13` se indicó que el encabezado de `/panel/login` sea `«Panel interno»`. En `qa/e2e/panel.mjs:160` la prueba actual todavía busca `getByRole('heading', { name: /panel interno de documentos/i })`; se respetó el texto `«Panel interno»` pedido en `N6`/`G13` (regla 10: no alterar el producto por una prueba) para que se actualice el selector dentro de `H2` en `qa/`.
+
+- **2026-11-10 — Codex:** `npm run qa:panel` no pudo iniciar la suite porque el build actual de `web/` falla con exports ausentes (`RolUsuario`, `DocumentoPanel`, `formatearFechaCorta`, entre otros) tras cambios de estructura de Fase 5. Se dejó el producto intacto según la regla 10; resolver los exports en Antigravity y volver a ejecutar QA. La sintaxis de los cinco módulos JS de QA sí pasó con `node --check`.
+
+- **2026-11-10 — Codex (Fase 5):** implementación R1–R5 lista. `node --check` pasó para los scripts QA; JSON de `deno.json`/`deno.lock` válido y `rg 'from "npm:' supabase` sin resultados. No se pudo correr Deno (no está instalado) ni `npm run qa:panel` (el build de `web/` falla con exports faltantes de Fase 5 Antigravity). Pendiente validar antes de marcar R1–R5 completos.

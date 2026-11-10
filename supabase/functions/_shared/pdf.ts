@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
-import QRCode from "npm:qrcode@1.5.4";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import QRCode from "qrcode";
 import { fechaValida } from "./validacion.ts";
 import { agregarEspacioFirma, firmarPdf, type CredencialFirma } from "./firma.ts";
 import { EMBLEMA_PNG_BASE64 } from "./emblema.ts";
@@ -65,21 +65,39 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
   return lines.length ? lines : [""];
 }
 
-function drawHeader(page: PDFPage, folio: string, bold: PDFFont, regular: PDFFont, logo: Awaited<ReturnType<PDFDocument["embedPng"]>>) {
+function dibujarEncabezado(
+  page: PDFPage,
+  data: Pick<DatosPdf, "orgNombre" | "folio">,
+  fuentes: { bold: PDFFont; regular: PDFFont },
+  logo: Awaited<ReturnType<PDFDocument["embedPng"]>>,
+  opciones: { principal: boolean },
+) {
   const margin = 56;
-  const folioLabel = `Folio: ${seguro(folio)}`;
-  page.drawImage(logo, { x: margin, y: 744, width: 23, height: 36 });
-  page.drawText("PROESA Electrónica", { x: margin + 31, y: 762, size: 11, font: bold, color: TINTA });
-  page.drawText("Registro de documentos oficiales", { x: margin + 31, y: 748, size: 8, font: regular, color: TINTA_TENUE });
+  const { bold, regular } = fuentes;
+  const principal = opciones.principal;
+  const logoWidth = principal ? 30 : 23;
+  const logoHeight = principal ? 47 : 36;
+  const textX = margin + (principal ? 39 : 31);
+  const titleY = principal ? 767 : 762;
+  const titleSize = principal ? 14 : 11;
+  const subtitleY = principal ? 750 : 748;
+  const subtitleSize = principal ? 9 : 8;
+  const folioSize = principal ? 10 : 9;
+  const folioY = principal ? 750 : 752;
+  const lineY = principal ? 737 : 738;
+  const folioLabel = `Folio: ${seguro(data.folio)}`;
+  page.drawImage(logo, { x: margin, y: principal ? 741 : 744, width: logoWidth, height: logoHeight });
+  page.drawText("PROESA Electrónica", { x: textX, y: titleY, size: titleSize, font: bold, color: TINTA });
+  page.drawText("Registro de documentos oficiales", { x: textX, y: subtitleY, size: subtitleSize, font: regular, color: TINTA_TENUE });
   page.drawText(folioLabel, {
-    x: 612 - margin - bold.widthOfTextAtSize(folioLabel, 9),
-    y: 752,
-    size: 9,
+    x: 612 - margin - bold.widthOfTextAtSize(folioLabel, folioSize),
+    y: folioY,
+    size: folioSize,
     font: bold,
     color: TINTA,
   });
-  page.drawLine({ start: { x: margin, y: 738 }, end: { x: 612 - margin, y: 738 }, thickness: 0.75, color: TINTA });
-  page.drawLine({ start: { x: margin, y: 735 }, end: { x: 612 - margin, y: 735 }, thickness: 0.75, color: TINTA });
+  page.drawLine({ start: { x: margin, y: lineY }, end: { x: 612 - margin, y: lineY }, thickness: 0.75, color: TINTA });
+  page.drawLine({ start: { x: margin, y: lineY - 3 }, end: { x: 612 - margin, y: lineY - 3 }, thickness: 0.75, color: TINTA });
 }
 
 async function cargarLogo(pdf: PDFDocument) {
@@ -113,27 +131,15 @@ export async function generarPdf(data: DatosPdf, credencial: CredencialFirma | n
   const rowGap = 8;
   let page = pdf.addPage([612, 792]);
   let y = 712;
+  const logo = await cargarLogo(pdf);
 
   const nextPage = () => {
     page = pdf.addPage([612, 792]);
-    drawHeader(page, data.folio, bold, regular, logo);
+    dibujarEncabezado(page, data, { bold, regular }, logo, { principal: false });
     y = 718;
   };
 
-  const logo = await cargarLogo(pdf);
-  page.drawImage(logo, { x: margin, y: 741, width: 30, height: 47 });
-  page.drawText("PROESA Electrónica", { x: margin + 39, y: 767, size: 14, font: bold, color: TINTA });
-  page.drawText("Registro de documentos oficiales", { x: margin + 39, y: 750, size: 9, font: regular, color: TINTA_TENUE });
-  const folioHeader = `Folio: ${seguro(data.folio)}`;
-  page.drawText(folioHeader, {
-    x: 612 - margin - bold.widthOfTextAtSize(folioHeader, 10),
-    y: 750,
-    size: 10,
-    font: bold,
-    color: TINTA,
-  });
-  page.drawLine({ start: { x: margin, y: 737 }, end: { x: 612 - margin, y: 737 }, thickness: 0.75, color: TINTA });
-  page.drawLine({ start: { x: margin, y: 734 }, end: { x: 612 - margin, y: 734 }, thickness: 0.75, color: TINTA });
+  dibujarEncabezado(page, data, { bold, regular }, logo, { principal: true });
 
   page.drawText("Tipo de documento", { x: margin, y: 710, size: 9, font: bold, color: TINTA_TENUE });
   let titleY = 684;

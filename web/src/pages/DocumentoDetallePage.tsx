@@ -1,118 +1,26 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { EstadoIndicador, EtiquetaEstado } from '../components/EtiquetaEstado';
+import { EtiquetaEstado, resolverEstadoIndicador } from '../components/EtiquetaEstado';
 import { LayoutPanel } from '../components/LayoutPanel';
+import { BitacoraDocumento } from '../components/panel/BitacoraDocumento';
+import { ModalCancelarDocumento } from '../components/panel/ModalCancelarDocumento';
 import { useAuth } from '../context/AuthContext';
 import {
   abreviarSha256,
-  esFechaVencida,
-  esPorVencer30Dias,
-  formatearFechaCorta,
-  formatearFechaHoraMX,
+  formatearFecha,
+  formatearFechaHora,
   formatearValorCampo
 } from '../lib/formato';
-import { supabase } from '../lib/supabase';
-import { CampoEsquema, DocumentoPanel, RegistroBitacora } from '../lib/tipos';
-import { useCargaDiferida, useTituloDocumento } from '../lib/useCargaDiferida';
-
-function resolverEstadoIndicador(doc: DocumentoPanel): EstadoIndicador {
-  if (doc.estado === 'cancelado') return 'cancelado';
-  if (doc.estado === 'pendiente') return 'pendiente';
-  if (doc.vigente_hasta && esFechaVencida(doc.vigente_hasta)) return 'vencido';
-  if (doc.vigente_hasta && esPorVencer30Dias(doc.vigente_hasta)) return 'por_vencer';
-  return 'vigente';
-}
-
-function etiquetaAccionBitacora(reg: RegistroBitacora): string {
-  const actor = reg.actor_nombre || 'Usuario interno';
-  const area = reg.actor_area ? ` (${reg.actor_area})` : '';
-  switch (reg.accion) {
-    case 'emitido':
-      return `Emitido por ${actor}${area}`;
-    case 'pdf_generado':
-      return `PDF generado por ${actor}${area}`;
-    case 'cancelado':
-      return `Cancelado por ${actor}${area}`;
-    case 'reserva_folio':
-      return `Reserva de folio por ${actor}${area}`;
-    default:
-      return `${reg.accion} por ${actor}${area}`;
-  }
-}
-
-function renderizarDetalleBitacora(detalle: Record<string, unknown>): React.ReactNode {
-  const entradas = Object.entries(detalle || {}).filter(
-    ([, v]) => v !== null && v !== undefined && String(v).trim() !== ''
-  );
-  if (entradas.length === 0) return null;
-
-  return (
-    <p className="audit-detail">
-      {entradas.map(([clave, valor], idx) => {
-        const separador = idx > 0 ? <span aria-hidden="true"> · </span> : null;
-        if (clave === 'folio') {
-          return (
-            <React.Fragment key={clave}>
-              {separador}
-              <span>
-                Folio <strong className="mono-text audit-folio-inline">{String(valor)}</strong>
-              </span>
-            </React.Fragment>
-          );
-        }
-        if (clave === 'motivo') {
-          return (
-            <React.Fragment key={clave}>
-              {separador}
-              <span>Motivo: {String(valor)}</span>
-            </React.Fragment>
-          );
-        }
-        if (clave === 'pdf_sha256') {
-          return (
-            <React.Fragment key={clave}>
-              {separador}
-              <span>
-                Huella PDF: <span className="mono-text">{abreviarSha256(String(valor))}</span>
-              </span>
-            </React.Fragment>
-          );
-        }
-        if (clave === 'pdf_path') {
-          return (
-            <React.Fragment key={clave}>
-              {separador}
-              <span>Archivo registrado en almacenamiento</span>
-            </React.Fragment>
-          );
-        }
-        const etiquetaLimpia =
-          clave.charAt(0).toUpperCase() + clave.slice(1).replace(/_/g, ' ');
-        const valorFormateado = formatearValorCampo(valor) ?? String(valor);
-        return (
-          <React.Fragment key={clave}>
-            {separador}
-            <span>
-              {etiquetaLimpia}: {valorFormateado}
-            </span>
-          </React.Fragment>
-        );
-      })}
-    </p>
-  );
-}
-
-interface ErroresModalCancelar {
-  motivo?: string;
-  confirmacion?: string;
-}
+import { useCargaDiferida, useTituloDocumento } from '../lib/hooks';
+import { obtenerBitacora, obtenerDocumento, urlDescargaPdf } from '../lib/panel';
+import { DefinicionCampo, DocumentoDetalle, RegistroBitacora } from '../lib/tipos';
 
 export function DocumentoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const { perfil } = useAuth();
   const esAdmin = perfil?.rol === 'admin';
 
-  const [documento, setDocumento] = useState<DocumentoPanel | null>(null);
+  const [documento, setDocumento] = useState<DocumentoDetalle | null>(null);
   const [bitacora, setBitacora] = useState<RegistroBitacora[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
   const mostrarEsqueleto = useCargaDiferida(cargando, 200);
@@ -123,17 +31,9 @@ export function DocumentoDetallePage() {
   const [hashCopiado, setHashCopiado] = useState<boolean>(false);
 
   const [mostrarModalCancelar, setMostrarModalCancelar] = useState<boolean>(false);
-  const [motivoCancelacion, setMotivoCancelacion] = useState<string>('');
-  const [confirmacionCheck, setConfirmacionCheck] = useState<boolean>(false);
-  const [erroresModal, setErroresModal] = useState<ErroresModalCancelar>({});
-  const [errorServidorModal, setErrorServidorModal] = useState<string | null>(null);
-  const [cancelando, setCancelando] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
   const botonAbrirModalRef = useRef<HTMLButtonElement | null>(null);
-  const modalCardRef = useRef<HTMLDivElement | null>(null);
-  const textareaMotivoRef = useRef<HTMLTextAreaElement | null>(null);
-  const resumenModalRef = useRef<HTMLDivElement | null>(null);
 
   const cerrarModalCancelar = useCallback(() => {
     setMostrarModalCancelar(false);
@@ -141,45 +41,6 @@ export function DocumentoDetallePage() {
       botonAbrirModalRef.current?.focus();
     }, 0);
   }, []);
-
-  useEffect(() => {
-    if (!mostrarModalCancelar) return;
-
-    const timer = window.setTimeout(() => {
-      textareaMotivoRef.current?.focus();
-    }, 10);
-
-    const manejarKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !cancelando) {
-        e.preventDefault();
-        cerrarModalCancelar();
-        return;
-      }
-
-      if (e.key === 'Tab' && modalCardRef.current) {
-        const focusables = modalCardRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusables.length === 0) return;
-        const primero = focusables[0];
-        const ultimo = focusables[focusables.length - 1];
-
-        if (e.shiftKey && document.activeElement === primero) {
-          e.preventDefault();
-          ultimo.focus();
-        } else if (!e.shiftKey && document.activeElement === ultimo) {
-          e.preventDefault();
-          primero.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', manejarKeyDown);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('keydown', manejarKeyDown);
-    };
-  }, [mostrarModalCancelar, cancelando, cerrarModalCancelar]);
 
   useTituloDocumento(documento ? `Panel · ${documento.folio}` : 'Panel · Detalle de documento');
 
@@ -189,27 +50,14 @@ export function DocumentoDetallePage() {
     setErrorCarga(null);
 
     try {
-      const [docRes, bitacoraRes] = await Promise.all([
-        supabase
-          .from('documentos')
-          .select(
-            'id,tipo_id,folio,estado,destinatario,emitido_por,emitido_en,vigente_hasta,datos,pdf_path,pdf_sha256,confirmado_en,cancelado_por,cancelado_en,motivo_cancelacion,tipos_documento(clave,nombre,campos)'
-          )
-          .eq('id', id)
-          .single(),
-        supabase.rpc('bitacora_documento', { p_documento_id: id })
+      const [docData, bitacoraData] = await Promise.all([
+        obtenerDocumento(id),
+        obtenerBitacora(id)
       ]);
-
-      if (docRes.error || !docRes.data) {
-        setErrorCarga('No se encontró el documento solicitado o no tiene permiso para consultarlo.');
-        return;
-      }
-
-      setDocumento(docRes.data as unknown as DocumentoPanel);
-
-      if (Array.isArray(bitacoraRes.data)) {
-        setBitacora(bitacoraRes.data as RegistroBitacora[]);
-      }
+      setDocumento(docData);
+      setBitacora(bitacoraData);
+    } catch {
+      setErrorCarga('No se encontró el documento solicitado o no tiene permiso para consultarlo.');
     } finally {
       setCargando(false);
     }
@@ -225,16 +73,10 @@ export function DocumentoDetallePage() {
     setErrorDescarga(null);
 
     try {
-      const { data, error } = await supabase.storage
-        .from('documentos')
-        .createSignedUrl(documento.pdf_path, 300);
-
-      if (error || !data?.signedUrl) {
-        setErrorDescarga('No fue posible generar el enlace de descarga del PDF.');
-        return;
-      }
-
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+      const signedUrl = await urlDescargaPdf(documento.pdf_path);
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      setErrorDescarga('No fue posible generar el enlace de descarga del PDF.');
     } finally {
       setDescargandoPdf(false);
     }
@@ -251,76 +93,12 @@ export function DocumentoDetallePage() {
     }
   };
 
-  const manejarConfirmarCancelacion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!documento) return;
-
-    setErrorServidorModal(null);
-    const motivoLimpio = motivoCancelacion.trim();
-    const nuevosErrores: ErroresModalCancelar = {};
-
-    if (motivoLimpio.length < 5) {
-      nuevosErrores.motivo = 'Indique el motivo de la cancelación (mínimo 5 caracteres).';
-    }
-
-    if (!confirmacionCheck) {
-      nuevosErrores.confirmacion =
-        'Debe marcar la casilla de confirmación para cancelar el documento.';
-    }
-
-    setErroresModal(nuevosErrores);
-
-    if (nuevosErrores.motivo || nuevosErrores.confirmacion) {
-      setTimeout(() => {
-        resumenModalRef.current?.focus();
-      }, 0);
-      return;
-    }
-
-    setCancelando(true);
-
-    try {
-      const { error } = await supabase.rpc('cancelar_documento', {
-        p_documento_id: documento.id,
-        p_motivo: motivoLimpio
-      });
-
-      if (error) {
-        setErrorServidorModal(error.message || 'No fue posible cancelar el documento.');
-        setTimeout(() => {
-          resumenModalRef.current?.focus();
-        }, 0);
-        return;
-      }
-
-      setMostrarModalCancelar(false);
-      setMotivoCancelacion('');
-      setConfirmacionCheck(false);
-      setErroresModal({});
-      setMensajeExito(`El documento ${documento.folio} ha sido cancelado correctamente.`);
-      await cargarDetalle();
-    } finally {
-      setCancelando(false);
-    }
-  };
-
   const tipoObj = documento
     ? Array.isArray(documento.tipos_documento)
       ? documento.tipos_documento[0]
       : documento.tipos_documento
     : null;
-  const esquemaCampos: CampoEsquema[] = tipoObj?.campos || [];
-
-  const listaErroresModal: { id: string; texto: string }[] = [];
-  if (erroresModal.motivo) {
-    listaErroresModal.push({ id: 'motivo-cancelacion', texto: erroresModal.motivo });
-  }
-  if (erroresModal.confirmacion) {
-    listaErroresModal.push({
-      id: 'check-confirmar-cancelacion',
-      texto: erroresModal.confirmacion
-    });
-  }
+  const esquemaCampos: DefinicionCampo[] = tipoObj?.campos || [];
 
   return (
     <LayoutPanel>
@@ -392,13 +170,7 @@ export function DocumentoDetallePage() {
                   ref={botonAbrirModalRef}
                   type="button"
                   className="btn btn-danger"
-                  onClick={() => {
-                    setErroresModal({});
-                    setErrorServidorModal(null);
-                    setMotivoCancelacion('');
-                    setConfirmacionCheck(false);
-                    setMostrarModalCancelar(true);
-                  }}
+                  onClick={() => setMostrarModalCancelar(true)}
                 >
                   Cancelar documento
                 </button>
@@ -418,7 +190,6 @@ export function DocumentoDetallePage() {
             </div>
           )}
 
-          {/* G9: Datos generales en renglones etiqueta/valor (2 columnas en escritorio, 1 en celular) */}
           <div className="card">
             <h2 className="section-title">Datos generales</h2>
             <dl className="renglones-panel-grid">
@@ -430,13 +201,13 @@ export function DocumentoDetallePage() {
               </div>
               <div className="renglon-panel-fila">
                 <dt className="renglon-panel-dt">Fecha de emisión</dt>
-                <dd className="renglon-panel-dd">{formatearFechaHoraMX(documento.emitido_en)}</dd>
+                <dd className="renglon-panel-dd">{formatearFechaHora(documento.emitido_en)}</dd>
               </div>
               <div className="renglon-panel-fila">
                 <dt className="renglon-panel-dt">Vigencia</dt>
                 <dd className="renglon-panel-dd">
                   {documento.vigente_hasta
-                    ? formatearFechaCorta(documento.vigente_hasta)
+                    ? formatearFecha(documento.vigente_hasta)
                     : 'Sin vencimiento'}
                 </dd>
               </div>
@@ -444,7 +215,7 @@ export function DocumentoDetallePage() {
                 <dt className="renglon-panel-dt">Confirmado en almacenamiento</dt>
                 <dd className="renglon-panel-dd">
                   {documento.confirmado_en
-                    ? formatearFechaHoraMX(documento.confirmado_en)
+                    ? formatearFechaHora(documento.confirmado_en)
                     : 'Pendiente'}
                 </dd>
               </div>
@@ -473,7 +244,11 @@ export function DocumentoDetallePage() {
                 <h3 className="subsection-title">Información de cancelación</h3>
                 <p>
                   <strong>Cancelado el:</strong>{' '}
-                  {documento.cancelado_en ? formatearFechaHoraMX(documento.cancelado_en) : <span className="text-muted">No capturado</span>}
+                  {documento.cancelado_en ? (
+                    formatearFechaHora(documento.cancelado_en)
+                  ) : (
+                    <span className="text-muted">No capturado</span>
+                  )}
                 </p>
                 <p>
                   <strong>Motivo:</strong>{' '}
@@ -535,156 +310,20 @@ export function DocumentoDetallePage() {
             )}
           </div>
 
-          {/* G9: Bitácora legible con nombres, fechas dd/mm/aaaa hh:mm y folio en Source Code Pro */}
-          <div className="card">
-            <h2 className="section-title">Bitácora de auditoría</h2>
-            {bitacora.length === 0 ? (
-              <p className="text-muted">Sin eventos registrados en bitácora.</p>
-            ) : (
-              <ul className="audit-timeline">
-                {bitacora.map((reg) => (
-                  <li key={reg.id} className="audit-item">
-                    <div className="audit-item-head">
-                      <strong>{etiquetaAccionBitacora(reg)}</strong>
-                      <span className="audit-date">{formatearFechaHoraMX(reg.creado_en)}</span>
-                    </div>
-                    {reg.detalle && renderizarDetalleBitacora(reg.detalle)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <BitacoraDocumento bitacora={bitacora} />
 
           {mostrarModalCancelar && (
-            <div
-              className="modal-backdrop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="modal-cancelar-titulo"
-            >
-              <div ref={modalCardRef} className="card modal-card">
-                <h2 id="modal-cancelar-titulo" className="section-title">
-                  Cancelar documento <span className="mono-text">{documento.folio}</span>
-                </h2>
-                <p className="text-muted">
-                  Esta acción es irreversible. Al cancelar el documento, cualquier persona que
-                  escanee su código QR verá el estado <strong>Documento cancelado</strong>.
-                </p>
-
-                {(errorServidorModal || listaErroresModal.length > 0) && (
-                  <div
-                    ref={resumenModalRef}
-                    className="alert alert-error error-summary mt-md"
-                    role="alert"
-                    tabIndex={-1}
-                  >
-                    {errorServidorModal ? (
-                      <p className="error-summary-title">{errorServidorModal}</p>
-                    ) : (
-                      <p className="error-summary-title">Revise los siguientes campos:</p>
-                    )}
-                    {listaErroresModal.length > 0 && (
-                      <ul className="error-summary-list">
-                        {listaErroresModal.map((item) => (
-                          <li key={item.id}>
-                            <a
-                              href={`#${item.id}`}
-                              onClick={(ev) => {
-                                ev.preventDefault();
-                                document.getElementById(item.id)?.focus();
-                              }}
-                            >
-                              {item.texto}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-
-                <form onSubmit={manejarConfirmarCancelacion} className="form-stack mt-md" noValidate>
-                  <div className="form-group">
-                    <label htmlFor="motivo-cancelacion" className="form-label">
-                      Motivo de la cancelación (mínimo 5 caracteres) *
-                    </label>
-                    <textarea
-                      ref={textareaMotivoRef}
-                      id="motivo-cancelacion"
-                      rows={3}
-                      className={`form-textarea ${erroresModal.motivo ? 'form-input-invalid' : ''}`}
-                      placeholder="Ej. Error en el nombre del destinatario; sustituido por nuevo folio."
-                      value={motivoCancelacion}
-                      aria-invalid={Boolean(erroresModal.motivo)}
-                      aria-describedby={erroresModal.motivo ? 'error-motivo-cancelacion' : undefined}
-                      onChange={(e) => {
-                        setMotivoCancelacion(e.target.value);
-                        if (erroresModal.motivo) {
-                          setErroresModal((prev) => ({ ...prev, motivo: undefined }));
-                        }
-                      }}
-                      required
-                    />
-                    {erroresModal.motivo && (
-                      <span
-                        id="error-motivo-cancelacion"
-                        className="field-error-text"
-                        role="alert"
-                      >
-                        {erroresModal.motivo}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label className="checkbox-row" htmlFor="check-confirmar-cancelacion">
-                      <input
-                        id="check-confirmar-cancelacion"
-                        type="checkbox"
-                        checked={confirmacionCheck}
-                        aria-invalid={Boolean(erroresModal.confirmacion)}
-                        aria-describedby={
-                          erroresModal.confirmacion ? 'error-check-cancelacion' : undefined
-                        }
-                        onChange={(e) => {
-                          setConfirmacionCheck(e.target.checked);
-                          if (erroresModal.confirmacion) {
-                            setErroresModal((prev) => ({ ...prev, confirmacion: undefined }));
-                          }
-                        }}
-                      />
-                      <span>
-                        Confirmo que deseo cancelar definitivamente el documento{' '}
-                        <strong className="mono-text">{documento.folio}</strong>.
-                      </span>
-                    </label>
-                    {erroresModal.confirmacion && (
-                      <span
-                        id="error-check-cancelacion"
-                        className="field-error-text"
-                        role="alert"
-                      >
-                        {erroresModal.confirmacion}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="modal-actions">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      disabled={cancelando}
-                      onClick={cerrarModalCancelar}
-                    >
-                      Volver sin cancelar
-                    </button>
-                    <button type="submit" className="btn btn-danger" disabled={cancelando}>
-                      {cancelando ? 'Cancelando…' : 'Confirmar cancelación'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <ModalCancelarDocumento
+              documento={documento}
+              onCerrar={cerrarModalCancelar}
+              onCancelado={async () => {
+                setMostrarModalCancelar(false);
+                setMensajeExito(
+                  `El documento ${documento.folio} ha sido cancelado correctamente.`
+                );
+                await cargarDetalle();
+              }}
+            />
           )}
         </>
       )}

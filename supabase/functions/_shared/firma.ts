@@ -1,8 +1,8 @@
 import { Buffer } from "node:buffer";
-import { SignPdf } from "npm:@signpdf/signpdf@3.3.0";
-import { P12Signer } from "npm:@signpdf/signer-p12@3.3.0";
-import { pdflibAddPlaceholder } from "npm:@signpdf/placeholder-pdf-lib@3.3.0";
-import type { PDFDocument } from "npm:pdf-lib@1.17.1";
+import { SignPdf } from "@signpdf/signpdf";
+import { P12Signer } from "@signpdf/signer-p12";
+import { pdflibAddPlaceholder } from "@signpdf/placeholder-pdf-lib";
+import type { PDFDocument } from "pdf-lib";
 
 // Firma institucional (PAdES, adbe.pkcs7.detached): la hace el servidor en cada emisión.
 // Adobe Reader recalcula la huella al abrir el PDF y avisa si se modificó después de firmarse.

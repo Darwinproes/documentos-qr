@@ -1,0 +1,554 @@
+/* ==========================================================================
+   CARA PÚBLICA — Encabezado, pie y páginas de verificación
+   ========================================================================== */
+
+.public-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--fondo);
+}
+
+.public-header {
+  background: var(--marino);
+  color: var(--fondo);
+}
+
+.public-header-inner {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  min-width: 44px;
+  text-decoration: none;
+  color: var(--fondo);
+}
+
+.brand-link:hover {
+  color: var(--fondo);
+}
+
+.brand-emblema {
+  width: 28px;
+  height: 41px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  color: var(--fondo);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  color: var(--texto-en-marino);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+}
+
+.public-nav {
+  display: flex;
+  align-items: center;
+}
+
+.nav-link-public {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+  border-radius: var(--radio-control);
+  border: 1px solid var(--marino-contorno-claro);
+  color: var(--fondo);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* En celular el nombre necesita todo el ancho; la página ya es la de verificar. */
+@media (max-width: 599px) {
+  .public-nav {
+    display: none;
+  }
+}
+
+.nav-link-public:hover {
+  color: var(--fondo);
+  background: var(--marino-hover);
+}
+
+/* Reserva una pantalla de alto para evitar saltos de diseño (CLS) */
+.public-main {
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 28px 0 40px;
+}
+
+.public-footer {
+  background: var(--fondo);
+  border-top: 1px solid var(--linea);
+  padding: 16px 0;
+  color: var(--texto-tenue);
+  font-size: 0.875rem;
+}
+
+.public-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+
+.footer-copy {
+  color: var(--texto-tenue);
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 2px;
+  color: var(--azul-enlace);
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: var(--azul-enlace-hover);
+  text-decoration: underline;
+}
+
+/* Encabezado de página pública con doble línea */
+.page-intro {
+  border-bottom: 3px double var(--marino);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  max-width: 760px;
+}
+
+.page-title {
+  margin: 0;
+  font-family: var(--fuente-serif);
+  font-size: clamp(1.625rem, 3.2vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--marino);
+}
+
+.page-lead {
+  margin: 10px 0 0;
+  color: var(--texto);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.page-subtitle {
+  margin: 4px 0 0;
+  color: var(--texto-tenue);
+  font-size: 0.9375rem;
+}
+
+/* Distribución de /verificar: 2 columnas en escritorio, 1 en celular */
+.verificar-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: start;
+  margin-bottom: 28px;
+}
+
+@media (min-width: 900px) {
+  .verificar-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+.verificar-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* Pestañas subrayadas */
+.tabs-header {
+  display: flex;
+  border-bottom: 1px solid var(--linea-fuerte);
+}
+
+.tab-btn {
+  flex: 1;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  font-family: var(--fuente-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--texto-tenue);
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .tab-btn {
+    flex: 0 1 auto;
+    padding: 8px 18px;
+  }
+}
+
+.tab-btn:hover {
+  color: var(--marino);
+}
+
+.tab-btn-active {
+  border-bottom-color: var(--marino);
+  color: var(--marino);
+  font-weight: 700;
+}
+
+.tab-panel {
+  padding-top: 4px;
+}
+
+.btn-submit-verificar {
+  align-self: stretch;
+  min-height: 46px;
+}
+
+@media (min-width: 768px) {
+  .btn-submit-verificar {
+    align-self: flex-start;
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+}
+
+.dominio-pie-form {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--texto-tenue);
+  line-height: 1.45;
+}
+
+.dominio-pie-form strong {
+  color: var(--texto);
+}
+
+/* Zona de carga de archivo PDF (Dropzone) */
+.dropzone {
+  border: 2px dashed var(--borde-campo);
+  border-radius: var(--radio-control);
+  background: var(--fondo-suave);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropzone-active {
+  border-color: var(--marino);
+  background: var(--valido-fondo);
+}
+
+.dropzone-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--marino);
+}
+
+.dropzone-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.dropzone-subtitle {
+  margin: 0 0 4px;
+  font-size: 0.875rem;
+  color: var(--texto-tenue);
+}
+
+.file-meta-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--fondo);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: var(--radio-control);
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.file-meta-name,
+.file-meta-hash {
+  margin: 2px 0;
+  word-break: break-all;
+}
+
+.privacy-notice {
+  margin: 12px 0 0;
+  font-size: 0.8125rem;
+  color: var(--texto-tenue);
+  text-align: center;
+}
+
+/* Recuadro de ayuda «¿Dónde están el folio y el código?» */
+.ayuda-verificacion-box {
+  background: var(--fondo-suave);
+  border: 1px solid var(--linea);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ayuda-verificacion-titulo {
+  margin: 0;
+  font-family: var(--fuente-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--marino);
+}
+
+.ayuda-verificacion-texto {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+.esquema-bloque-recuadro {
+  background: var(--fondo);
+  border: 1px solid var(--marino);
+  padding: 12px 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.esquema-qr-svg {
+  flex-shrink: 0;
+}
+
+.esquema-qr-fondo {
+  fill: var(--fondo);
+}
+
+.esquema-qr-tinta {
+  fill: var(--texto);
+}
+
+.esquema-bloque-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.8125rem;
+  color: var(--texto);
+  min-width: 0;
+}
+
+.esquema-bloque-encabezado {
+  font-family: var(--fuente-serif);
+  font-size: 0.9375rem;
+  color: var(--marino);
+}
+
+.esquema-dato-codigo {
+  color: var(--marino);
+  white-space: nowrap;
+}
+
+.esquema-dominio-nota {
+  color: var(--texto-tenue);
+  font-size: 0.75rem;
+}
+
+.ayuda-verificacion-nota {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+/* ==========================================================================
+   RESULTADO DE VERIFICACIÓN PÚBLICO
+   ========================================================================== */
+
+.resultado-institucional {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.veredicto-meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--texto-tenue);
+}
+
+.veredicto-encabezado {
+  border-top: 3px double var(--marino);
+  border-bottom: 1px solid var(--linea-fuerte);
+  padding: 18px 0;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.veredicto-icono {
+  flex-shrink: 0;
+}
+
+.veredicto-icono-valido {
+  color: var(--valido);
+}
+
+.veredicto-icono-vencido {
+  color: var(--vencido);
+}
+
+.veredicto-icono-cancelado {
+  color: var(--cancelado);
+}
+
+.veredicto-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.veredicto-titulo {
+  margin: 0;
+  font-family: var(--fuente-serif);
+  font-size: clamp(1.625rem, 3.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--marino);
+}
+
+.veredicto-oracion {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--texto);
+}
+
+/* Renglones etiqueta/valor con líneas finas */
+.renglones-institucionales {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.renglon-fila {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--linea);
+  font-size: 0.875rem;
+  align-items: baseline;
+}
+
+@media (min-width: 600px) {
+  .renglon-fila {
+    grid-template-columns: 160px minmax(0, 1fr);
+    font-size: 0.9375rem;
+  }
+}
+
+.renglon-fila:last-child {
+  border-bottom: none;
+}
+
+.renglon-dt {
+  color: var(--texto-tenue);
+  font-weight: 400;
+}
+
+.renglon-dd {
+  margin: 0;
+  color: var(--texto);
+  overflow-wrap: anywhere;
+}
+
+.renglon-folio-valor {
+  color: var(--marino);
+  white-space: nowrap;
+}
+
+.renglon-fila-alerta .renglon-dt,
+.renglon-fila-alerta .renglon-dd {
+  color: var(--cancelado);
+  font-weight: 600;
+}
+
+.alerta-no-registrado {
+  background: var(--cancelado-fondo);
+  border: 1px solid var(--cancelado-borde);
+  border-left: 4px solid var(--cancelado);
+  border-radius: var(--radio-control);
+  padding: 14px 16px;
+}
+
+.alerta-no-registrado-titulo {
+  margin: 0 0 8px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--cancelado);
+}
+
+.alerta-no-registrado-lista {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.875rem;
+  display: grid;
+  gap: 6px;
+}
+
+.alerta-no-registrado-lista a {
+  overflow-wrap: anywhere;
+}
+
+.aviso-dominio-institucional {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--fondo-suave);
+  border: 1px solid var(--linea);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--texto);
+}
+
+.resultado-acciones {
+  display: flex;
+  padding-top: 4px;
+}

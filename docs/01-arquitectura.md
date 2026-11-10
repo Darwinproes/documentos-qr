@@ -22,7 +22,7 @@ El QR **no** es la seguridad: se puede copiar. La seguridad está en el **regist
 │                                        cancelar_documento, verificar_documento            │
 │                                                                                           │
 │  Edge Functions (Codex)                                                                   │
-│   ├ emitir-documento  (requiere sesión de emisor/admin) → genera token, código, PDF + QR │
+│   ├ emitir-documento  (requiere sesión de emisor/admin) → token, código, PDF + QR firmado│
 │   └ verificar         (pública, con límite por IP)      → consulta y devuelve datos      │
 └───────────────────────────────────────────────────────────────────────────────────────────┘
                  ▲                                    ▲
@@ -42,8 +42,8 @@ El QR **no** es la seguridad: se puede copiar. La seguridad está en el **regist
 4. La función:
    1. Genera un **token** aleatorio (32 bytes, base64url, 43 caracteres) y un **código manual** (10 caracteres Crockford, se muestra `XXXXX-XXXXX`).
    2. Llama a `emitir_documento` → la base asigna el folio `PREFIJO-AAAA-NNNNNN`, guarda **solo el SHA-256** del token y del código, y deja el documento `pendiente`.
-   3. Genera el PDF con el QR (`{VERIFICACION_BASE_URL}/v/{token}`), el folio y el código.
-   4. Calcula el SHA-256 del PDF final, lo sube a Storage y llama a `confirmar_documento` → `vigente`.
+   3. Genera el PDF con el QR (`{VERIFICACION_BASE_URL}/v/{token}`), el folio y el código, y lo **firma digitalmente** (PAdES) con el certificado de PROESA guardado en los secretos de la función (`_shared/firma.ts`; ver `03-seguridad.md`). Sin secreto el PDF sale sin firma (solo pruebas locales); si la firma falla, la emisión falla.
+   4. Calcula el SHA-256 del PDF final **ya firmado**, lo sube a Storage y llama a `confirmar_documento` → `vigente`.
    5. Devuelve folio, enlace, código y una URL firmada para descargar el PDF.
 5. Si algo falla después del paso 2, el documento queda `pendiente` y **nunca** aparece como válido.
 
@@ -98,7 +98,7 @@ Definición de `campos`:
 ## Fuera del piloto (fase 2)
 
 - Dominio propio tipo `verifica.proesaelectronica.com`.
-- Firma digital del PDF (PAdES) para documentos que se mandan por correo.
+- Certificado de firma emitido por una autoridad reconocida por Adobe (AATL); el piloto usa uno propio, desde 2026-10-29.
 - MFA para administradores.
 - Plantillas de PDF por tipo de documento (en el piloto todas usan la plantilla genérica).
 - Integración con la intranet.

@@ -1,16 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { LayoutPanel } from '../components/LayoutPanel';
 import { emitirDocumento } from '../lib/api';
-import {
-  abreviarEnlaceVerificacion,
-  abreviarSha256,
-  formatearFecha,
-  formatearValorCampo,
-  hoyLocalIso,
-  sumarDiasIso
-} from '../lib/formato';
-import { supabase } from '../lib/supabase';
+import { formatearFecha, hoyLocalIso, sumarDiasIso } from '../lib/formato';
+import { useTituloDocumento } from '../lib/hooks';
+import { listarTiposActivos } from '../lib/panel';
 import {
   DefinicionCampo,
   ErrorApi,
@@ -18,9 +11,11 @@ import {
   SolicitudEmitirDocumento,
   TipoDocumento
 } from '../lib/tipos';
-import { useTituloDocumento } from '../lib/useCargaDiferida';
+import { PasoConfirmar } from './emitir/PasoConfirmar';
+import { ModoVigencia, PasoDatos } from './emitir/PasoDatos';
+import { CampoCopiadoEmision, PasoResultado } from './emitir/PasoResultado';
+import { PasoTipo } from './emitir/PasoTipo';
 
-type ModoVigencia = 'segun_tipo' | 'fecha_especifica' | 'sin_vencimiento';
 type PasoEmision = 1 | 2 | 3 | 4;
 
 const PASOS_DEFINICION: { numero: PasoEmision; etiqueta: string }[] = [
@@ -35,44 +30,46 @@ export function EmitirDocumentoPage() {
 
   const [tipos, setTipos] = useState<TipoDocumento[]>([]);
   const [cargandoTipos, setCargandoTipos] = useState<boolean>(true);
-
   const [tipoClave, setTipoClave] = useState<string>('');
   const [destinatario, setDestinatario] = useState<string>('');
   const [datos, setDatos] = useState<Record<string, string>>({});
   const [modoVigencia, setModoVigencia] = useState<ModoVigencia>('segun_tipo');
   const [fechaEspecifica, setFechaEspecifica] = useState<string>('');
-
   const [paso, setPaso] = useState<PasoEmision>(1);
   const [emitiendo, setEmitiendo] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [erroresCampo, setErroresCampo] = useState<Record<string, string>>({});
   const [resultado, setResultado] = useState<RespuestaEmitirDocumento | null>(null);
-  const [copiadoCampo, setCopiadoCampo] = useState<'folio' | 'codigo' | 'enlace' | 'sha256' | null>(
-    null
-  );
+  const [copiadoCampo, setCopiadoCampo] = useState<CampoCopiadoEmision>(null);
 
   const resumenErroresRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function cargarTiposActivos() {
       setCargandoTipos(true);
-      const { data } = await supabase
-        .from('tipos_documento')
-        .select('*')
-        .eq('activo', true)
-        .order('id');
-
-      const lista = (data || []) as TipoDocumento[];
-      setTipos(lista);
-      if (lista.length > 0) {
-        setTipoClave(lista[0].clave);
+      try {
+        const lista = await listarTiposActivos();
+        setTipos(lista);
+        if (lista.length > 0) setTipoClave(lista[0].clave);
+      } catch {
+        setTipos([]);
+      } finally {
+        setCargandoTipos(false);
       }
-      setCargandoTipos(false);
     }
     void cargarTiposActivos();
   }, []);
 
   const tipoActual = tipos.find((t) => t.clave === tipoClave) || null;
+
+  const limpiarError = (idCampo: string) => {
+    if (!erroresCampo[idCampo]) return;
+    setErroresCampo((prev) => {
+      const copia = { ...prev };
+      delete copia[idCampo];
+      return copia;
+    });
+  };
 
   const manejarCambioTipo = (nuevaClave: string) => {
     setTipoClave(nuevaClave);
@@ -82,18 +79,8 @@ export function EmitirDocumentoPage() {
   };
 
   const manejarCambioCampo = (clave: string, valor: string) => {
-    setDatos((prev) => ({
-      ...prev,
-      [clave]: valor
-    }));
-    const idInput = `campo-${clave}`;
-    if (erroresCampo[idInput]) {
-      setErroresCampo((prev) => {
-        const copia = { ...prev };
-        delete copia[idInput];
-        return copia;
-      });
-    }
+    setDatos((prev) => ({ ...prev, [clave]: valor }));
+    limpiarError(`campo-${clave}`);
   };
 
   const avanzarADatos = (e: React.FormEvent) => {
@@ -145,20 +132,15 @@ export function EmitirDocumentoPage() {
     setErroresCampo(nuevosErrores);
 
     if (Object.keys(nuevosErrores).length > 0) {
-      setTimeout(() => {
-        resumenErroresRef.current?.focus();
-      }, 0);
+      setTimeout(() => resumenErroresRef.current?.focus(), 0);
       return false;
     }
-
     return true;
   };
 
   const pasarAConfirmacion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validarDatosCaptura()) {
-      setPaso(3);
-    }
+    if (validarDatosCaptura()) setPaso(3);
   };
 
   const confirmarYEmitir = async () => {
@@ -180,7 +162,6 @@ export function EmitirDocumentoPage() {
       datos: datosTexto,
       sin_vencimiento: modoVigencia === 'sin_vencimiento'
     };
-
     if (modoVigencia === 'fecha_especifica') {
       solicitud.vigente_hasta = fechaEspecifica;
     }
@@ -190,20 +171,17 @@ export function EmitirDocumentoPage() {
       setResultado(res);
       setPaso(4);
     } catch (err) {
-      if (err instanceof ErrorApi) {
-        setError(err.message);
-      } else {
-        setError('Ocurrió un error inesperado al emitir el documento.');
-      }
+      setError(
+        err instanceof ErrorApi
+          ? err.message
+          : 'Ocurrió un error inesperado al emitir el documento.'
+      );
     } finally {
       setEmitiendo(false);
     }
   };
 
-  const copiarValor = async (
-    tipo: 'folio' | 'codigo' | 'enlace' | 'sha256',
-    texto: string
-  ) => {
+  const copiarValor = async (tipo: Exclude<CampoCopiadoEmision, null>, texto: string) => {
     try {
       await navigator.clipboard.writeText(texto);
       setCopiadoCampo(tipo);
@@ -234,10 +212,8 @@ export function EmitirDocumentoPage() {
     return 'Según el tipo (Sin vencimiento)';
   };
 
-  const listaErroresPaso2 = Object.entries(erroresCampo).map(([id, texto]) => ({ id, texto }));
-
   return (
-    <LayoutPanel rolesPermitidos={['emisor', 'admin']}>
+    <LayoutPanel>
       <div className="panel-header-row">
         <div>
           <h1 className="panel-page-title">Emitir documento oficial</h1>
@@ -247,7 +223,6 @@ export function EmitirDocumentoPage() {
         </div>
       </div>
 
-      {/* Indicador de pasos: 1 Tipo → 2 Datos → 3 Confirmar → 4 Listo */}
       <nav className="stepper-nav" aria-label="Progreso de emisión">
         <ol className="stepper-list">
           {PASOS_DEFINICION.map((item) => {
@@ -284,518 +259,62 @@ export function EmitirDocumentoPage() {
           <p className="state-text">No hay tipos de documento activos para emitir.</p>
         </div>
       ) : paso === 1 ? (
-        <section className="card form-card">
-          <form onSubmit={avanzarADatos} className="form-stack" noValidate>
-            <div className="form-group">
-              <label htmlFor="select-tipo" className="form-label">
-                Seleccione el tipo de documento a emitir *
-              </label>
-              <select
-                id="select-tipo"
-                className="form-select"
-                value={tipoClave}
-                onChange={(e) => manejarCambioTipo(e.target.value)}
-                required
-              >
-                {tipos.map((t) => (
-                  <option key={t.id} value={t.clave}>
-                    {t.clave} — {t.nombre}
-                  </option>
-                ))}
-              </select>
-              {tipoActual?.descripcion && (
-                <span className="form-hint">{tipoActual.descripcion}</span>
-              )}
-            </div>
-
-            {tipoActual && (
-              <div className="type-preview-box">
-                <p className="text-small">
-                  <strong>Prefijo de folio:</strong>{' '}
-                  <span className="mono-text">{tipoActual.prefijo_folio}</span> ·{' '}
-                  <strong>Vigencia por defecto:</strong>{' '}
-                  {tipoActual.vigencia_dias
-                    ? `${tipoActual.vigencia_dias} días`
-                    : 'Sin vencimiento'}{' '}
-                  · <strong>Campos del formato:</strong> {(tipoActual.campos || []).length}
-                </p>
-              </div>
-            )}
-
-            <div className="form-actions-bar">
-              <Link to="/panel" className="btn btn-secondary">
-                Cancelar
-              </Link>
-              <button type="submit" className="btn btn-primary">
-                Continuar a captura de datos
-              </button>
-            </div>
-          </form>
-        </section>
+        <PasoTipo
+          tipos={tipos}
+          tipoClave={tipoClave}
+          tipoActual={tipoActual}
+          onCambiarTipo={manejarCambioTipo}
+          onAvanzar={avanzarADatos}
+        />
       ) : paso === 2 && tipoActual ? (
-        <section className="card form-card">
-          {listaErroresPaso2.length > 0 && (
-            <div
-              ref={resumenErroresRef}
-              className="alert alert-error error-summary"
-              role="alert"
-              tabIndex={-1}
-            >
-              <p className="error-summary-title">Revise los siguientes campos obligatorios:</p>
-              <ul className="error-summary-list">
-                {listaErroresPaso2.map((item) => (
-                  <li key={item.id}>
-                    <a
-                      href={`#${item.id}`}
-                      onClick={(ev) => {
-                        ev.preventDefault();
-                        document.getElementById(item.id)?.focus();
-                      }}
-                    >
-                      {item.texto}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <form onSubmit={pasarAConfirmacion} className="form-stack" noValidate>
-            <div className="form-group">
-              <label htmlFor="input-destinatario" className="form-label">
-                Destinatario (nombre completo o razón social) *
-              </label>
-              <input
-                id="input-destinatario"
-                type="text"
-                className={`form-input ${
-                  erroresCampo['input-destinatario'] ? 'form-input-invalid' : ''
-                }`}
-                placeholder="Ej. Juan Pérez López"
-                maxLength={200}
-                value={destinatario}
-                aria-invalid={Boolean(erroresCampo['input-destinatario'])}
-                aria-describedby={
-                  erroresCampo['input-destinatario']
-                    ? 'hint-destinatario error-input-destinatario'
-                    : 'hint-destinatario'
-                }
-                onChange={(e) => {
-                  setDestinatario(e.target.value);
-                  if (erroresCampo['input-destinatario']) {
-                    setErroresCampo((prev) => {
-                      const copia = { ...prev };
-                      delete copia['input-destinatario'];
-                      return copia;
-                    });
-                  }
-                }}
-                required
-              />
-              <span id="hint-destinatario" className="form-hint">
-                Aparece en el encabezado de verificación y en el PDF.
-              </span>
-              {erroresCampo['input-destinatario'] && (
-                <span
-                  id="error-input-destinatario"
-                  className="field-error-text"
-                  role="alert"
-                >
-                  {erroresCampo['input-destinatario']}
-                </span>
-              )}
-            </div>
-
-            {tipoActual.campos && tipoActual.campos.length > 0 && (
-              <fieldset className="fields-fieldset">
-                <legend className="fieldset-legend">Datos del formato ({tipoActual.nombre})</legend>
-                <div className="form-stack">
-                  {tipoActual.campos.map((campo) => {
-                    const idInput = `campo-${campo.clave}`;
-                    const idError = `error-${idInput}`;
-                    const valorActual = datos[campo.clave] ?? '';
-                    const msgError = erroresCampo[idInput];
-
-                    return (
-                      <div key={campo.clave} className="form-group">
-                        <label htmlFor={idInput} className="form-label">
-                          {campo.etiqueta} {campo.requerido ? '*' : '(opcional)'}{' '}
-                          <span className="badge badge-subtle">
-                            {campo.publico ? 'Visible al verificar' : 'Solo uso interno'}
-                          </span>
-                        </label>
-
-                        {campo.tipo === 'texto_largo' ? (
-                          <textarea
-                            id={idInput}
-                            className={`form-textarea ${msgError ? 'form-input-invalid' : ''}`}
-                            rows={3}
-                            placeholder={`Ej. ${campo.etiqueta}`}
-                            value={valorActual}
-                            aria-invalid={Boolean(msgError)}
-                            aria-describedby={msgError ? idError : undefined}
-                            onChange={(e) => manejarCambioCampo(campo.clave, e.target.value)}
-                            required={campo.requerido}
-                            maxLength={2000}
-                          />
-                        ) : (
-                          <input
-                            id={idInput}
-                            type={
-                              campo.tipo === 'fecha'
-                                ? 'date'
-                                : campo.tipo === 'numero'
-                                  ? 'number'
-                                  : 'text'
-                            }
-                            className={`form-input ${msgError ? 'form-input-invalid' : ''}`}
-                            placeholder={
-                              campo.tipo === 'texto'
-                                ? `Ej. ${campo.etiqueta}`
-                                : campo.tipo === 'numero'
-                                  ? 'Ej. 8'
-                                  : undefined
-                            }
-                            value={valorActual}
-                            aria-invalid={Boolean(msgError)}
-                            aria-describedby={msgError ? idError : undefined}
-                            onChange={(e) => manejarCambioCampo(campo.clave, e.target.value)}
-                            required={campo.requerido}
-                            maxLength={2000}
-                          />
-                        )}
-                        {msgError && (
-                          <span id={idError} className="field-error-text" role="alert">
-                            {msgError}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            )}
-
-            <fieldset className="fields-fieldset">
-              <legend className="fieldset-legend">Vigencia del documento</legend>
-              <div className="radio-group">
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="modo-vigencia"
-                    checked={modoVigencia === 'segun_tipo'}
-                    onChange={() => {
-                      setModoVigencia('segun_tipo');
-                      if (erroresCampo['input-vigencia-fecha']) {
-                        setErroresCampo((prev) => {
-                          const copia = { ...prev };
-                          delete copia['input-vigencia-fecha'];
-                          return copia;
-                        });
-                      }
-                    }}
-                  />
-                  <span>
-                    Según el tipo (
-                    {tipoActual.vigencia_dias
-                      ? `${tipoActual.vigencia_dias} días`
-                      : 'sin vencimiento por defecto'}
-                    )
-                  </span>
-                </label>
-
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="modo-vigencia"
-                    checked={modoVigencia === 'fecha_especifica'}
-                    onChange={() => setModoVigencia('fecha_especifica')}
-                  />
-                  <span>Fecha específica</span>
-                </label>
-
-                {modoVigencia === 'fecha_especifica' && (
-                  <div className="nested-date-input form-group">
-                    <label htmlFor="input-vigencia-fecha" className="form-label">
-                      Vigente hasta *
-                    </label>
-                    <input
-                      id="input-vigencia-fecha"
-                      type="date"
-                      className={`form-input ${
-                        erroresCampo['input-vigencia-fecha'] ? 'form-input-invalid' : ''
-                      }`}
-                      min={hoyLocalIso()}
-                      value={fechaEspecifica}
-                      aria-invalid={Boolean(erroresCampo['input-vigencia-fecha'])}
-                      aria-describedby={
-                        erroresCampo['input-vigencia-fecha']
-                          ? 'error-vigencia-fecha'
-                          : undefined
-                      }
-                      onChange={(e) => {
-                        setFechaEspecifica(e.target.value);
-                        if (erroresCampo['input-vigencia-fecha']) {
-                          setErroresCampo((prev) => {
-                            const copia = { ...prev };
-                            delete copia['input-vigencia-fecha'];
-                            return copia;
-                          });
-                        }
-                      }}
-                      required
-                    />
-                    {erroresCampo['input-vigencia-fecha'] && (
-                      <span
-                        id="error-vigencia-fecha"
-                        className="field-error-text"
-                        role="alert"
-                      >
-                        {erroresCampo['input-vigencia-fecha']}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="modo-vigencia"
-                    checked={modoVigencia === 'sin_vencimiento'}
-                    onChange={() => {
-                      setModoVigencia('sin_vencimiento');
-                      if (erroresCampo['input-vigencia-fecha']) {
-                        setErroresCampo((prev) => {
-                          const copia = { ...prev };
-                          delete copia['input-vigencia-fecha'];
-                          return copia;
-                        });
-                      }
-                    }}
-                  />
-                  <span>Sin vencimiento</span>
-                </label>
-              </div>
-            </fieldset>
-
-            <div className="form-actions-bar">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setError(null);
-                  setErroresCampo({});
-                  setPaso(1);
-                }}
-              >
-                Cambiar tipo
-              </button>
-              <button type="submit" className="btn btn-primary">
-                Revisar y confirmar
-              </button>
-            </div>
-          </form>
-        </section>
+        <PasoDatos
+          tipoActual={tipoActual}
+          destinatario={destinatario}
+          onDestinatarioChange={(valor) => {
+            setDestinatario(valor);
+            limpiarError('input-destinatario');
+          }}
+          datos={datos}
+          onCampoChange={manejarCambioCampo}
+          modoVigencia={modoVigencia}
+          onModoVigenciaChange={(modo) => {
+            setModoVigencia(modo);
+            if (modo !== 'fecha_especifica') limpiarError('input-vigencia-fecha');
+          }}
+          fechaEspecifica={fechaEspecifica}
+          onFechaEspecificaChange={(fecha) => {
+            setFechaEspecifica(fecha);
+            limpiarError('input-vigencia-fecha');
+          }}
+          erroresCampo={erroresCampo}
+          resumenErroresRef={resumenErroresRef}
+          onVolverPaso1={() => {
+            setError(null);
+            setErroresCampo({});
+            setPaso(1);
+          }}
+          onContinuarConfirmacion={pasarAConfirmacion}
+        />
       ) : paso === 3 && tipoActual ? (
-        <section className="card confirmation-card" aria-live="polite">
-          <h2 className="section-title">Confirmar datos antes de emitir</h2>
-          <p className="page-subtitle">
-            Verifique cuidadosamente la información. Al confirmar se asignará un folio consecutivo
-            oficial y se generará el PDF definitivo.
-          </p>
-
-          <dl className="renglones-panel-grid mt-section">
-            <div className="renglon-panel-fila">
-              <dt className="renglon-panel-dt">Tipo de documento</dt>
-              <dd className="renglon-panel-dd">
-                {tipoActual.clave} — {tipoActual.nombre}
-              </dd>
-            </div>
-            <div className="renglon-panel-fila">
-              <dt className="renglon-panel-dt">Vigencia seleccionada</dt>
-              <dd className="renglon-panel-dd">{resumenVigenciaTexto()}</dd>
-            </div>
-            <div className="renglon-panel-fila renglon-panel-wide">
-              <dt className="renglon-panel-dt">Destinatario</dt>
-              <dd className="renglon-panel-dd">{destinatario.trim()}</dd>
-            </div>
-          </dl>
-
-          {tipoActual.campos && tipoActual.campos.length > 0 && (
-            <div className="mt-section">
-              <h3 className="subsection-title">Campos del documento</h3>
-              <dl className="renglones-panel-grid">
-                {tipoActual.campos.map((campo) => {
-                  const val = formatearValorCampo(datos[campo.clave], campo.tipo);
-                  return (
-                    <div key={campo.clave} className="renglon-panel-fila">
-                      <dt className="renglon-panel-dt">{campo.etiqueta}</dt>
-                      <dd className="renglon-panel-dd">
-                        {val !== null ? val : <span className="text-muted">No capturado</span>}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            </div>
-          )}
-
-          <div className="form-actions-bar">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setError(null);
-                setPaso(2);
-              }}
-              disabled={emitiendo}
-            >
-              Modificar datos
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={confirmarYEmitir}
-              disabled={emitiendo}
-            >
-              {emitiendo ? 'Emitiendo y generando PDF…' : 'Emitir'}
-            </button>
-          </div>
-        </section>
+        <PasoConfirmar
+          tipoActual={tipoActual}
+          destinatario={destinatario}
+          datos={datos}
+          resumenVigencia={resumenVigenciaTexto()}
+          emitiendo={emitiendo}
+          onModificarDatos={() => {
+            setError(null);
+            setPaso(2);
+          }}
+          onConfirmarYEmitir={() => void confirmarYEmitir()}
+        />
       ) : resultado ? (
-        <section className="card emission-result-card" aria-live="polite">
-          <div className="status-banner status-valido">
-            <div className="status-header-row">
-              <svg
-                className="status-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
-              </svg>
-              <h2 className="status-heading">Documento emitido correctamente</h2>
-            </div>
-            <p className="status-message">
-              El documento ha quedado registrado con estado vigente y su archivo PDF está listo.
-            </p>
-          </div>
-
-          <div className="alert alert-warning mt-section" role="note">
-            <strong>Aviso importante:</strong> El enlace y el código solo se muestran ahora. Ya
-            quedan impresos en el PDF; para reimprimir, descargue el PDF desde el detalle del
-            documento.
-          </div>
-
-          <div className="sr-only" aria-live="polite">
-            {copiadoCampo ? 'Copiado al portapapeles' : ''}
-          </div>
-
-          {/* G5: Folio y código sin partir */}
-          <div className="credentials-highlight-grid mt-section">
-            <div className="credential-card">
-              <span className="credential-label">Folio asignado</span>
-              <div className="credential-value-row">
-                <strong className="mono-text credential-big-value">{resultado.folio}</strong>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => copiarValor('folio', resultado.folio)}
-                >
-                  {copiadoCampo === 'folio' ? 'Copiado' : 'Copiar'}
-                </button>
-              </div>
-            </div>
-
-            <div className="credential-card">
-              <span className="credential-label">Código de verificación</span>
-              <div className="credential-value-row">
-                <strong className="mono-text credential-big-value">
-                  {resultado.codigo_verificacion}
-                </strong>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-secondary"
-                  onClick={() => copiarValor('codigo', resultado.codigo_verificacion)}
-                >
-                  {copiadoCampo === 'codigo' ? 'Copiado' : 'Copiar'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* G5: Huella y enlace abreviados con botones Copiar */}
-          <dl className="renglones-panel-grid mt-section">
-            <div className="renglon-panel-fila">
-              <dt className="renglon-panel-dt">Vigencia</dt>
-              <dd className="renglon-panel-dd">
-                {resultado.vigente_hasta
-                  ? formatearFecha(resultado.vigente_hasta)
-                  : 'Sin vencimiento'}
-              </dd>
-            </div>
-            <div className="renglon-panel-fila">
-              <dt className="renglon-panel-dt">Huella digital PDF (SHA-256)</dt>
-              <dd className="renglon-panel-dd sha-inline-row">
-                <code className="mono-text" title={resultado.pdf_sha256}>
-                  {abreviarSha256(resultado.pdf_sha256)}
-                </code>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  aria-label="Copiar huella digital SHA-256"
-                  onClick={() => copiarValor('sha256', resultado.pdf_sha256)}
-                >
-                  {copiadoCampo === 'sha256' ? 'Copiado' : 'Copiar huella'}
-                </button>
-              </dd>
-            </div>
-            <div className="renglon-panel-fila renglon-panel-wide">
-              <dt className="renglon-panel-dt">Enlace de verificación (QR)</dt>
-              <dd className="renglon-panel-dd sha-inline-row">
-                <code className="mono-text nowrap-code" title={resultado.url_verificacion}>
-                  {abreviarEnlaceVerificacion(resultado.url_verificacion)}
-                </code>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => copiarValor('enlace', resultado.url_verificacion)}
-                >
-                  {copiadoCampo === 'enlace' ? 'Copiado' : 'Copiar enlace'}
-                </button>
-              </dd>
-            </div>
-          </dl>
-
-          <div className="emission-actions-bar">
-            <Link
-              to={`/panel/documentos/${resultado.documento_id}`}
-              className="btn btn-secondary"
-            >
-              Ver detalle del documento
-            </Link>
-
-            <button type="button" className="btn btn-secondary" onClick={reiniciarFormulario}>
-              Emitir otro documento
-            </button>
-
-            <a
-              href={resultado.pdf_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              download={`${resultado.folio}.pdf`}
-              className="btn btn-primary"
-            >
-              Descargar PDF
-            </a>
-          </div>
-        </section>
+        <PasoResultado
+          resultado={resultado}
+          copiadoCampo={copiadoCampo}
+          onCopiarValor={copiarValor}
+          onEmitirOtro={reiniciarFormulario}
+        />
       ) : null}
     </LayoutPanel>
   );

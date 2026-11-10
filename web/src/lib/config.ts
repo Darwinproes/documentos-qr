@@ -1,8 +1,16 @@
-export const SUPABASE_URL: string =
-  import.meta.env.VITE_SUPABASE_URL || 'https://usbacyllkozqrcwbbuok.supabase.co';
+const envUrl = import.meta.env.VITE_SUPABASE_URL;
+const envKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-export const SUPABASE_PUBLISHABLE_KEY: string =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+if (import.meta.env.PROD && (!envUrl || !envKey)) {
+  throw new Error(
+    'Faltan variables obligatorias en producción: VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY.'
+  );
+}
+
+export const SUPABASE_URL: string =
+  envUrl || 'https://usbacyllkozqrcwbbuok.supabase.co';
+
+export const SUPABASE_PUBLISHABLE_KEY: string = envKey || '';
 
 export const ORG_NOMBRE: string =
   import.meta.env.VITE_ORG_NOMBRE || 'PROESA Electrónica';

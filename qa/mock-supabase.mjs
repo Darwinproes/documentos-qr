@@ -11,6 +11,7 @@ const users = [
   { id: id(2), email: 'emisor@proesa.test', nombre: 'Emilio Emisor', area: 'Recursos Humanos', rol: 'emisor', activo: true },
   { id: id(3), email: 'consulta@proesa.test', nombre: 'Clara Consulta', area: 'Calidad', rol: 'consulta', activo: true },
   { id: id(4), email: 'inactivo@proesa.test', nombre: 'Iván Inactivo', area: 'Producción', rol: 'consulta', activo: false },
+  { id: id(5), email: 'largonombre@proesa.test', nombre: 'María Fernanda de los Ángeles Hernández de la O', area: 'Administración de Calidad y Mejora Continua', rol: 'consulta', activo: true },
 ].map((user, index) => ({ ...user, creado_en: `2026-01-0${index + 1}T12:00:00.000Z` }));
 const sessions = new Map();
 const now = new Date();
@@ -30,6 +31,9 @@ const typeRows = [
     prefijo_folio: 'CERT', vigencia_dias: null, activo: true, creado_en: '2026-01-02T12:00:00.000Z',
     campos: [{ clave: 'lote', etiqueta: 'Número de lote', tipo: 'texto', requerido: true, publico: true }],
   },
+  { id: 3, clave: 'RECO', nombre: 'Reconocimiento de participación', descripcion: 'Tercer tipo de prueba.', prefijo_folio: 'RECO', vigencia_dias: 180, activo: true, creado_en: '2026-01-03T12:00:00.000Z', campos: [{ clave: 'evento', etiqueta: 'Nombre del evento', tipo: 'texto', requerido: true, publico: true }] },
+  { id: 4, clave: 'DICT', nombre: 'Dictamen técnico de evaluación', descripcion: 'Cuarto tipo de prueba.', prefijo_folio: 'DICT', vigencia_dias: null, activo: false, creado_en: '2026-01-04T12:00:00.000Z', campos: [{ clave: 'fecha_revision', etiqueta: 'Fecha de revisión', tipo: 'fecha', requerido: false, publico: true }] },
+  { id: 5, clave: 'CARTA', nombre: 'Carta de cumplimiento de requisitos', descripcion: 'Quinto tipo de prueba.', prefijo_folio: 'CARTA', vigencia_dias: 365, activo: true, creado_en: '2026-01-05T12:00:00.000Z', campos: [{ clave: 'resultado', etiqueta: 'Resultado', tipo: 'texto_largo', requerido: false, publico: true }] },
 ];
 const nombres = [
   'María Fernanda Gómez Hernández', 'José Muñoz Peña', 'Roberto Sánchez Ruiz', 'Lucía García Núñez',
@@ -52,7 +56,7 @@ const docs = nombres.map((destinatario, i) => {
     emitido_por: num % 2 ? id(2) : id(1), emitido_en: new Date(Date.now() - num * 86400000).toISOString(),
     vigente_hasta: expired ? isoDays(-num) : isoDays(120 + num),
     datos: tipo.clave === 'CONST'
-      ? { concepto: `Capacitación técnica ${num}`, fecha_evento: '2026-10-20', observaciones: 'Dato interno de prueba.' }
+      ? { concepto: `Capacitación técnica ${num}`, fecha_evento: num % 2 ? '2026-10-20' : '', observaciones: 'Dato interno de prueba.' }
       : { lote: `LOTE-${String(num).padStart(4, '0')}` },
     pdf_path: estado === 'pendiente' ? null : `${tipo.clave}/2026/${folio}.pdf`,
     pdf_sha256: estado === 'pendiente' ? null : String(num).padStart(64, '0'),
@@ -62,11 +66,11 @@ const docs = nombres.map((destinatario, i) => {
     motivo_cancelacion: estado === 'cancelado' ? 'Registro ficticio para pruebas.' : null,
   };
 });
-const bitacora = docs.flatMap((doc) => doc.estado === 'pendiente' ? [] : [{
-  id: docs.indexOf(doc) + 1, documento_id: doc.id, accion: 'emitido', actor: doc.emitido_por,
-  detalle: { folio: doc.folio }, creado_en: doc.emitido_en,
-}]);
-let nextTypeId = 3;
+const bitacora = docs.flatMap((doc) => doc.estado === 'pendiente' ? [] : [
+  { id: docs.indexOf(doc) * 2 + 1, documento_id: doc.id, accion: 'emitido', actor: doc.emitido_por, detalle: { folio: doc.folio }, creado_en: doc.emitido_en },
+  ...(doc.estado === 'cancelado' ? [{ id: docs.indexOf(doc) * 2 + 2, documento_id: doc.id, accion: 'cancelado', actor: doc.cancelado_por, detalle: { motivo: doc.motivo_cancelacion }, creado_en: doc.cancelado_en }] : []),
+]);
+let nextTypeId = Math.max(...typeRows.map((type) => type.id)) + 1;
 let nextDocNumber = 31;
 
 // Toda respuesta lleva CORS; sin esto el navegador bloquea la lectura aunque el cambio sí se aplicó.
@@ -246,6 +250,7 @@ const server = createServer(async (req, res) => {
     let found = null;
     if (body.metodo === 'manual') found = docs.find((doc) => doc.folio === String(body.folio).toUpperCase() && body.codigo === '7KQ2M-XA9PD');
     if (body.metodo === 'archivo') found = docs.find((doc) => doc.pdf_sha256 === body.pdf_sha256);
+    if (body.metodo === 'qr' && body.token === 'Qm9EjemploTokenValidoDe43CaracteresExactos1') found = docs.find((doc) => doc.folio === 'CONST-2026-000001');
     const result = found && found.estado !== 'pendiente' ? 'valido' : 'no_encontrado';
     return json(res, 200, { resultado: result, documento: result === 'valido' ? { folio: found.folio, tipo: typeRows.find((t) => t.id === found.tipo_id)?.nombre, destinatario: found.destinatario, area_emisora: 'Recursos Humanos', emitido_en: found.emitido_en, vigente_hasta: found.vigente_hasta, cancelado_en: found.cancelado_en, campos: [] } : null, verificado_en: new Date().toISOString() });
   }
