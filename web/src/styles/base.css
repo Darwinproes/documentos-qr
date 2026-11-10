@@ -61,7 +61,8 @@ body {
   line-height: 1.5;
   color: var(--texto);
   background-color: var(--fondo);
-  overflow-x: hidden;
+  /* clip y no hidden: hidden vuelve a body un contenedor de desplazamiento y el menú lateral deja de quedarse fijo */
+  overflow-x: clip;
 }
 
 img,

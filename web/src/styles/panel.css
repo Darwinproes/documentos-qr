@@ -276,6 +276,7 @@
   margin: 0 0 2px;
   font-weight: 700;
   color: var(--fondo);
+  overflow-wrap: anywhere;
 }
 
 .user-meta {
